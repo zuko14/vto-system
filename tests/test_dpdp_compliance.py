@@ -62,7 +62,7 @@ class TestConsentBeforeProcessing:
 
         from flows.intent_router import route_message
 
-        customer_data = {"consent_given": False, "id": "cust-1"}
+        customer_data = {"consent_given": False, "id": "cust-1", "language": "en"}
 
         result = await route_message(
             text="try this on",
@@ -82,7 +82,7 @@ class TestConsentBeforeProcessing:
         """Image processing should be blocked without consent."""
         from flows.intent_router import route_message
 
-        customer_data = {"consent_given": False, "id": "cust-1"}
+        customer_data = {"consent_given": False, "id": "cust-1", "language": "en"}
 
         result = await route_message(
             text="",

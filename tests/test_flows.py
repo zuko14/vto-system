@@ -151,10 +151,10 @@ class TestIntentRouter:
         assert result["action"] == "request_consent"
 
     @pytest.mark.asyncio
-    async def test_image_routes_to_tryon_flow(
+    async def test_image_routes_to_image_type_flow(
         self, mock_tenant, mock_session, mock_customer_data
     ):
-        """Image message should route to tryon_flow receive_product."""
+        """Image message should route to image_type_flow ask_type."""
         from flows.intent_router import route_message
 
         result = await route_message(
@@ -166,8 +166,8 @@ class TestIntentRouter:
             media_id="test-media-id",
         )
 
-        assert result["flow"] == "tryon_flow"
-        assert result["action"] == "receive_product"
+        assert result["flow"] == "image_type_flow"
+        assert result["action"] == "ask_type"
 
     @pytest.mark.asyncio
     async def test_awaiting_selfie_state_routes_image_to_selfie(

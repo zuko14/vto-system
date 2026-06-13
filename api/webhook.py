@@ -172,7 +172,7 @@ async def _process_message(message_data: dict) -> None:
         # 4. Get/create customer session
         session = _get_session(phone_hash, tenant.id)
 
-        # 5. Check/create customer record
+        # 5. Get full customer data
         consent_info = await check_consent(phone_hash, tenant.id)
         customer_data = {
             "consent_given": consent_info["consent_given"],
@@ -186,7 +186,6 @@ async def _process_message(message_data: dict) -> None:
                 db.table("customers")
                 .select("*")
                 .eq("id", consent_info["customer_id"])
-                .eq("tenant_id", tenant.id)
                 .execute()
             )
             if result.data:
@@ -348,6 +347,15 @@ async def _execute_flow(
                 customer_id=customer_id,
                 language=language,
             )
+        elif action == "handle":
+            # If already consented and LLM classified as consent_give
+            from services.whatsapp import send_text_message
+            from core.constants import get_message
+            await send_text_message(
+                phone_number=phone_number,
+                message=get_message("consent_confirmed", language),
+                phone_number_id=tenant.phone_number_id,
+            )
 
     elif flow == "tryon_flow":
         if action == "receive_product":
@@ -372,6 +380,13 @@ async def _execute_flow(
             await send_text_message(
                 phone_number=phone_number,
                 message=get_message("awaiting_selfie", language),
+                phone_number_id=tenant.phone_number_id,
+            )
+        elif action == "remind_product":
+            from services.whatsapp import send_text_message
+            await send_text_message(
+                phone_number=phone_number,
+                message=get_message("awaiting_product", language),
                 phone_number_id=tenant.phone_number_id,
             )
         elif action == "start_new":

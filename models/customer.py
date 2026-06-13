@@ -73,6 +73,7 @@ class CustomerSession(BaseModel):
         self.pending_category = None
         self.pending_media_id = None
         self.pending_media_caption = None
+        self.pending_language = None
         self.current_job_id = None
         self.last_updated = datetime.now(timezone.utc)
 

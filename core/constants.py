@@ -258,11 +258,11 @@ MESSAGES_I18N = {
             "Try again tomorrow, or contact {seller_name} to upgrade."
         ),
         "awaiting_selfie": "Great! Ab apni ek saaf photo (selfie) bhejiye, jisme aap samne dekh rahe ho. 📸",
-        "awaiting_product": "Photo mil gayi! 📸 Ab woh outfit bhejiye jo aap try karna chahte ho. 👗",
+        "awaiting_product": "Photo mil gayi! 📸 Ab woh outfit bhejiye jo aap try karna chahte ho. 👕",
         "invalid_selfie": "That doesn't look like a clear selfie. Try again? 😊",
         "help": (
             "Here's what I can do:\n"
-            "👗 Outfit try-on — send a product photo\n"
+            "👕 Outfit try-on — send a product photo\n"
             "💍 Jewellery try-on\n"
             "🗑️ Delete data — send DELETE\n"
             "🛍️ Browse catalog — send CATALOG"
@@ -288,7 +288,7 @@ MESSAGES_I18N = {
         "consent_declined": "No problem! Whenever you're ready, send AGREE.",
         "consent_confirmed": (
             "Thank you! ✅ You can now use virtual try-on. "
-            "Send any outfit photo! 👗"
+            "Send any outfit photo! 👕"
         ),
         "feature_not_available": (
             "This feature is not available on your current plan 😊\n"
@@ -312,7 +312,7 @@ MESSAGES_I18N = {
             "• Plain background\n"
             "• Front-facing"
         ),
-        "awaiting_product": "Photo mil gayi! 📸 Ab woh outfit bhejiye jo aap try karna chahte ho. 👗",
+        "awaiting_product": "Photo mil gayi! 📸 Ab woh outfit bhejiye jo aap try karna chahte ho. 👕",
         "processing": "✨ Aapka look generate ho raha hai...\n(20-30 seconds)",
         "tryon_complete": "🎉 Yeh raha aapka look!\n\n",
         "plan_limit_reached": (
@@ -322,7 +322,7 @@ MESSAGES_I18N = {
         "invalid_selfie": "Yeh selfie clear nahi hai. Ek aur try karo? 😊",
         "help": (
             "Main kya kar sakta hoon:\n"
-            "👗 Outfit try-on: product photo bhejo\n"
+            "👕 Outfit try-on: product photo bhejo\n"
             "💍 Jewellery try-on\n"
             "🗑️ Data delete: DELETE bhejo\n"
             "🛍️ Catalog: CATALOG bhejo"
@@ -348,7 +348,7 @@ MESSAGES_I18N = {
         "consent_declined": "No problem! Jab bhi ready ho, AGREE bhejo.",
         "consent_confirmed": (
             "Dhanyavaad! ✅ Ab aap virtual try-on use kar sakte ho. "
-            "Koi bhi outfit photo bhejo! 👗"
+            "Koi bhi outfit photo bhejo! 👕"
         ),
         "feature_not_available": (
             "Yeh feature aapke current plan mein available nahi hai 😊\n"
@@ -379,11 +379,11 @@ MESSAGES_I18N = {
             "రేపు మళ్ళీ try చేయండి, లేదా {seller_name} ని contact చేయండి."
         ),
         "awaiting_selfie": "మంచిది! ఇప్పుడు దయచేసి మీరు ముందుకు చూస్తున్న ఒక స్పష్టమైన ఫోటో (selfie) పంపండి. 📸",
-        "awaiting_product": "ఫోటో అందింది! 📸 ఇప్పుడు మీరు ప్రయత్నించాలనుకుంటున్న outfit పంపండి. 👗",
+        "awaiting_product": "ఫోటో అందింది! 📸 ఇప్పుడు మీరు ప్రయత్నించాలనుకుంటున్న outfit పంపండి. 👕",
         "invalid_selfie": "ఇది clear selfie కాదు. మళ్ళీ try చేయండి? 😊",
         "help": (
             "నేను ఏమి చేయగలను:\n"
-            "👗 Outfit try-on — product photo పంపండి\n"
+            "👕 Outfit try-on — product photo పంపండి\n"
             "💍 Jewellery try-on\n"
             "🗑️ Data delete — DELETE పంపండి\n"
             "🛍️ Catalog — CATALOG పంపండి"
@@ -409,7 +409,7 @@ MESSAGES_I18N = {
         "consent_declined": "ఫర్వాలేదు! మీరు ready అయినప్పుడు AGREE పంపండి.",
         "consent_confirmed": (
             "ధన్యవాదాలు! ✅ ఇప్పుడు virtual try-on use చేయవచ్చు. "
-            "ఏ outfit photo అయినా పంపండి! 👗"
+            "ఏ outfit photo అయినా పంపండి! 👕"
         ),
         "feature_not_available": (
             "ఈ feature మీ plan లో available కాదు 😊\n"
@@ -442,7 +442,7 @@ MESSAGES_I18N = {
         "invalid_selfie": "இது clear selfie அல்ல. மீண்டும் முயற்சிக்கவும்? 😊",
         "help": (
             "நான் என்ன செய்ய முடியும்:\n"
-            "👗 Outfit try-on — product photo அனுப்புங்கள்\n"
+            "👕 Outfit try-on — product photo அனுப்புங்கள்\n"
             "💍 Jewellery try-on\n"
             "🗑️ Data delete — DELETE அனுப்புங்கள்\n"
             "🛍️ Catalog — CATALOG அனுப்புங்கள்"
@@ -468,7 +468,7 @@ MESSAGES_I18N = {
         "consent_declined": "பரவாயில்லை! நீங்கள் ready ஆனால் AGREE அனுப்புங்கள்.",
         "consent_confirmed": (
             "நன்றி! ✅ இப்போது virtual try-on பயன்படுத்தலாம். "
-            "ஏதாவது outfit photo அனுப்புங்கள்! 👗"
+            "ஏதாவது outfit photo அனுப்புங்கள்! 👕"
         ),
         "feature_not_available": (
             "இந்த feature உங்கள் plan ல் available இல்லை 😊\n"
@@ -509,7 +509,7 @@ def get_message(key: str, language: str = "en", **kwargs) -> str:
 # Consent message template (supports language substitution)
 CONSENT_TEMPLATES = {
     "en": (
-        "Welcome! 👗 ZukoLabs Virtual Try-On!\n\n"
+        "Welcome! 👕 ZukoLabs Virtual Try-On!\n\n"
         "Your photo will be used only for try-on generation.\n"
         "✅ Photo used only for try-on\n"
         "✅ Deleted within 24 hours after processing\n"
@@ -518,7 +518,7 @@ CONSENT_TEMPLATES = {
         "Send AGREE to continue 👇"
     ),
     "hi": (
-        "Namaste! 👗 ZukoLabs Virtual Try-On ke liye welcome hai!\n\n"
+        "Namaste! 👕 ZukoLabs Virtual Try-On ke liye welcome hai!\n\n"
         "Aapki photo try-on generate karne ke liye use hogi.\n"
         "✅ Photo sirf try-on ke liye use hogi\n"
         "✅ Processing ke baad 24 ghante mein delete ho jayegi\n"
@@ -527,7 +527,7 @@ CONSENT_TEMPLATES = {
         "Agree karne ke liye AGREE bhejo 👇"
     ),
     "te": (
-        "స్వాగతం! 👗 ZukoLabs Virtual Try-On!\n\n"
+        "స్వాగతం! 👕 ZukoLabs Virtual Try-On!\n\n"
         "మీ ఫోటో try-on కోసం మాత్రమే వాడతాం.\n"
         "✅ ఫోటో try-on కోసం మాత్రమే\n"
         "✅ 24 గంటల్లో delete అవుతుంది\n"
@@ -536,7 +536,7 @@ CONSENT_TEMPLATES = {
         "AGREE పంపండి 👇"
     ),
     "ta": (
-        "வரவேற்கிறோம்! 👗 ZukoLabs Virtual Try-On!\n\n"
+        "வரவேற்கிறோம்! 👕 ZukoLabs Virtual Try-On!\n\n"
         "உங்கள் புகைப்படம் try-on உருவாக்க மட்டுமே பயன்படுத்தப்படும்.\n"
         "✅ புகைப்படம் try-on மட்டுமே\n"
         "✅ 24 மணி நேரத்தில் நீக்கப்படும்\n"
@@ -611,7 +611,7 @@ IMAGE_TYPE_BUTTONS = {
                 },
                 {
                     "type": "reply",
-                    "reply": {"id": "type_product", "title": "An Outfit 👗"},
+                    "reply": {"id": "type_product", "title": "An Outfit 👕"},
                 },
             ]
         },
@@ -631,7 +631,7 @@ POST_TRYON_BUTTONS = {
             "buttons": [
                 {
                     "type": "reply",
-                    "reply": {"id": "try_another", "title": "Try Another 👗"},
+                    "reply": {"id": "try_another", "title": "Try Another 👕"},
                 },
                 {
                     "type": "reply",
@@ -656,7 +656,7 @@ FRIEND_SHARE_BUTTONS = {
             "buttons": [
                 {
                     "type": "reply",
-                    "reply": {"id": "try_another", "title": "Try Another 👗"},
+                    "reply": {"id": "try_another", "title": "Try Another 👕"},
                 },
                 {
                     "type": "reply",

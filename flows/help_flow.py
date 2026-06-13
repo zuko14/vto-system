@@ -103,7 +103,7 @@ def _build_help_message(tenant: Tenant, language: str = "en") -> str:
         Formatted help text.
     """
     lines = [
-        f"*{tenant.business_name}* Virtual Try-On 👗\n",
+        f"*{tenant.business_name}* Virtual Try-On 👕\n",
     ]
 
     # Add base help message

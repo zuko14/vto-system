@@ -88,7 +88,7 @@ async def handle_catalog_browse(
             if item.get("tags"):
                 caption += f"\n🏷️ {', '.join(item['tags'][:3])}"
 
-            caption += "\n\n👗 Try-on karna hai? Is photo ko reply karo!"
+            caption += "\n\n👕 Try-on karna hai? Is photo ko reply karo!"
 
             if item.get("image_url"):
                 await send_image_message(

@@ -92,15 +92,12 @@ async def route_message(
         }
 
     if session.state == SessionState.AWAITING_IMAGE_TYPE:
-        # User tapped "My Photo" or "An Outfit"
-        if button_reply_id in ("type_selfie", "type_product"):
-            return {
-                "flow": "image_type_flow",
-                "action": "handle_selection",
-                "intent": Intent.TRYON_SINGLE,
-                "button_id": button_reply_id,
-            }
-        # Fallback if they type something instead
+        # If they send another image instead of tapping a button, update the pending media
+        if message_type == "image" and media_id:
+            session.pending_media_id = media_id
+            session.pending_media_caption = text
+            
+        # Fallback to re-asking the type
         return {
             "flow": "image_type_flow",
             "action": "ask_type",
@@ -308,6 +305,18 @@ def _route_button_reply(
             "flow": "friend_share_flow",
             "action": "initiate",
             "intent": Intent.FRIEND_SHARE,
+        },
+        "type_selfie": {
+            "flow": "image_type_flow",
+            "action": "handle_selection",
+            "intent": Intent.TRYON_SINGLE,
+            "button_id": "type_selfie",
+        },
+        "type_product": {
+            "flow": "image_type_flow",
+            "action": "handle_selection",
+            "intent": Intent.TRYON_SINGLE,
+            "button_id": "type_product",
         },
     }
 

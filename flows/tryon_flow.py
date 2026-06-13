@@ -115,6 +115,68 @@ async def handle_product_image(
         session.reset()
 
 
+async def handle_selfie_first(
+    phone_number: str,
+    session: CustomerSession,
+    tenant: Tenant,
+    customer_id: str,
+    language: str = "en",
+) -> None:
+    """
+    Handle a selfie sent by the customer when they send their selfie FIRST.
+    Transitions to AWAITING_PRODUCT state.
+    """
+    media_id = session.pending_media_id
+    if not media_id:
+        return
+
+    try:
+        selfie_bytes = await download_media(media_id)
+        if len(selfie_bytes) < 5000:
+            await send_text_message(
+                phone_number=phone_number,
+                message=MESSAGES["invalid_selfie"],
+                phone_number_id=tenant.phone_number_id,
+            )
+            return
+
+        processed = await preprocess_image(selfie_bytes)
+        selfie_path = await upload_selfie(
+            tenant_id=tenant.id,
+            customer_id=customer_id,
+            image_bytes=processed,
+        )
+
+        selfie_url = await get_signed_url(SELFIE_BUCKET, selfie_path)
+
+        session.pending_selfie_url = selfie_url
+        session.state = SessionState.AWAITING_PRODUCT
+        session.last_updated = datetime.now(timezone.utc)
+
+        # Fetch translated message
+        from core.constants import get_message
+
+        await send_text_message(
+            phone_number=phone_number,
+            message=get_message("awaiting_product", language),
+            phone_number_id=tenant.phone_number_id,
+        )
+
+        logger.info(
+            "Selfie received first — awaiting product (tenant: %s)",
+            tenant.business_name,
+        )
+
+    except Exception as e:
+        logger.error("Failed to handle selfie first: %s", str(e))
+        await send_text_message(
+            phone_number=phone_number,
+            message=MESSAGES["unknown_error"],
+            phone_number_id=tenant.phone_number_id,
+        )
+        session.reset()
+
+
 async def handle_selfie(
     phone_number: str,
     media_id: str,

@@ -58,6 +58,8 @@ class CustomerSession(BaseModel):
     pending_product_id: Optional[str] = None
     pending_selfie_url: Optional[str] = None
     pending_category: Optional[str] = None
+    pending_media_id: Optional[str] = None
+    pending_media_caption: Optional[str] = None
     current_job_id: Optional[str] = None
     last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     message_count: int = 0
@@ -69,6 +71,8 @@ class CustomerSession(BaseModel):
         self.pending_product_id = None
         self.pending_selfie_url = None
         self.pending_category = None
+        self.pending_media_id = None
+        self.pending_media_caption = None
         self.current_job_id = None
         self.last_updated = datetime.now(timezone.utc)
 

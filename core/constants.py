@@ -31,6 +31,8 @@ class SessionState(str, Enum):
     """Customer session states for the try-on flow state machine."""
     IDLE = "idle"
     AWAITING_LANGUAGE = "awaiting_language"
+    AWAITING_IMAGE_TYPE = "awaiting_image_type"
+    AWAITING_PRODUCT = "awaiting_product"
     AWAITING_SELFIE = "awaiting_selfie"
     PROCESSING = "processing"
     POST_TRYON = "post_tryon"
@@ -255,6 +257,8 @@ MESSAGES_I18N = {
             "You've used all your try-ons for today 😊 "
             "Try again tomorrow, or contact {seller_name} to upgrade."
         ),
+        "awaiting_selfie": "Great! Ab apni ek saaf photo (selfie) bhejiye, jisme aap samne dekh rahe ho. 📸",
+        "awaiting_product": "Photo mil gayi! 📸 Ab woh outfit bhejiye jo aap try karna chahte ho. 👗",
         "invalid_selfie": "That doesn't look like a clear selfie. Try again? 😊",
         "help": (
             "Here's what I can do:\n"
@@ -308,6 +312,7 @@ MESSAGES_I18N = {
             "• Plain background\n"
             "• Front-facing"
         ),
+        "awaiting_product": "Photo mil gayi! 📸 Ab woh outfit bhejiye jo aap try karna chahte ho. 👗",
         "processing": "✨ Aapka look generate ho raha hai...\n(20-30 seconds)",
         "tryon_complete": "🎉 Yeh raha aapka look!\n\n",
         "plan_limit_reached": (
@@ -373,6 +378,8 @@ MESSAGES_I18N = {
             "ఈ రోజు try-ons అయిపోయాయి 😊 "
             "రేపు మళ్ళీ try చేయండి, లేదా {seller_name} ని contact చేయండి."
         ),
+        "awaiting_selfie": "మంచిది! ఇప్పుడు దయచేసి మీరు ముందుకు చూస్తున్న ఒక స్పష్టమైన ఫోటో (selfie) పంపండి. 📸",
+        "awaiting_product": "ఫోటో అందింది! 📸 ఇప్పుడు మీరు ప్రయత్నించాలనుకుంటున్న outfit పంపండి. 👗",
         "invalid_selfie": "ఇది clear selfie కాదు. మళ్ళీ try చేయండి? 😊",
         "help": (
             "నేను ఏమి చేయగలను:\n"
@@ -581,6 +588,35 @@ LANGUAGE_BUTTON_MAP = {
     "lang_ta": "ta",
 }
 
+
+# ═══════════════════════════════════════════════════════════════
+# IMAGE TYPE BUTTONS (WhatsApp)
+# ═══════════════════════════════════════════════════════════════
+
+IMAGE_TYPE_BUTTONS = {
+    "type": "interactive",
+    "interactive": {
+        "type": "button",
+        "body": {
+            "text": (
+                "We received your photo! 📸 What is this?\n"
+                "ఆ ఫోటో ఏమిటి? / यह फोटो क्या है?"
+            )
+        },
+        "action": {
+            "buttons": [
+                {
+                    "type": "reply",
+                    "reply": {"id": "type_selfie", "title": "My Photo 🤳"},
+                },
+                {
+                    "type": "reply",
+                    "reply": {"id": "type_product", "title": "An Outfit 👗"},
+                },
+            ]
+        },
+    },
+}
 
 # ═══════════════════════════════════════════════════════════════
 # POST TRY-ON INTERACTIVE BUTTONS (WhatsApp)

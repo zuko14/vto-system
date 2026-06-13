@@ -297,6 +297,39 @@ async def _execute_flow(
                 phone_number_id=tenant.phone_number_id,
             )
 
+    elif flow == "image_type_flow":
+        if action == "ask_type":
+            from services.whatsapp import send_interactive_buttons
+            from core.constants import IMAGE_TYPE_BUTTONS
+            await send_interactive_buttons(
+                phone_number=phone_number,
+                interactive_payload=IMAGE_TYPE_BUTTONS,
+                phone_number_id=tenant.phone_number_id,
+            )
+        elif action == "handle_selection":
+            button_id = route.get("button_id")
+            if button_id == "type_selfie":
+                # We have their selfie, now we need a product
+                from flows.tryon_flow import handle_selfie_first
+                await handle_selfie_first(
+                    phone_number=phone_number,
+                    session=session,
+                    tenant=tenant,
+                    customer_id=customer_id,
+                    language=language,
+                )
+            elif button_id == "type_product":
+                # We have a product, now we need a selfie
+                from flows.tryon_flow import handle_product_image
+                await handle_product_image(
+                    phone_number=phone_number,
+                    media_id=session.pending_media_id,
+                    caption=session.pending_media_caption,
+                    session=session,
+                    tenant=tenant,
+                    customer_id=customer_id,
+                )
+
     elif flow == "consent_flow":
         if action == "request_consent":
             await request_consent(

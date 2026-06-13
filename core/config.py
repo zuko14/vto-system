@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     # ── Replicate (Try-On Engine) ────────────────────────────
     replicate_api_token: str = ""
-    replicate_viton_model: str = "cuuupid/idm-vton"
+    replicate_viton_model: str = "yisol/idm-vton"
 
     # ── App Settings ─────────────────────────────────────────
     app_env: str = "development"

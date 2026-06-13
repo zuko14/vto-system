@@ -91,6 +91,22 @@ async def route_message(
             "intent": Intent.GREETING,
         }
 
+    if session.state == SessionState.AWAITING_IMAGE_TYPE:
+        # User tapped "My Photo" or "An Outfit"
+        if button_reply_id in ("type_selfie", "type_product"):
+            return {
+                "flow": "image_type_flow",
+                "action": "handle_selection",
+                "intent": Intent.TRYON_SINGLE,
+                "button_id": button_reply_id,
+            }
+        # Fallback if they type something instead
+        return {
+            "flow": "image_type_flow",
+            "action": "ask_type",
+            "intent": Intent.UNKNOWN,
+        }
+
     if session.state == SessionState.AWAITING_SELFIE:
         if message_type == "image" and media_id:
             return {
@@ -103,6 +119,22 @@ async def route_message(
             return {
                 "flow": "tryon_flow",
                 "action": "remind_selfie",
+                "intent": Intent.TRYON_SINGLE,
+            }
+
+    if session.state == SessionState.AWAITING_PRODUCT:
+        if message_type == "image" and media_id:
+            return {
+                "flow": "tryon_flow",
+                "action": "receive_product",
+                "intent": Intent.TRYON_SINGLE,
+                "media_id": media_id,
+                "caption": text,
+            }
+        else:
+            return {
+                "flow": "tryon_flow",
+                "action": "remind_product",
                 "intent": Intent.TRYON_SINGLE,
             }
 
@@ -180,12 +212,13 @@ async def route_message(
 
     # ── 5. Handle image messages (product photo or selfie) ────
     if message_type == "image" and media_id:
+        session.pending_media_id = media_id
+        session.pending_media_caption = text
+        session.state = SessionState.AWAITING_IMAGE_TYPE
         return {
-            "flow": "tryon_flow",
-            "action": "receive_product",
+            "flow": "image_type_flow",
+            "action": "ask_type",
             "intent": Intent.TRYON_SINGLE,
-            "media_id": media_id,
-            "caption": text,
         }
 
     # ── 6. Handle voice messages ──────────────────────────────

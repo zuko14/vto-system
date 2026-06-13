@@ -89,21 +89,52 @@ async def handle_product_image(
         # Update session state
         session.pending_product_url = product_url
         session.pending_category = _detect_category(caption)
-        session.state = SessionState.AWAITING_SELFIE
-        session.last_updated = datetime.now(timezone.utc)
 
-        # Ask for selfie
-        await send_text_message(
-            phone_number=phone_number,
-            message=MESSAGES["awaiting_selfie"],
-            phone_number_id=tenant.phone_number_id,
-        )
+        if session.pending_selfie_url:
+            # We already have the selfie, start processing
+            session.state = SessionState.PROCESSING
+            session.last_updated = datetime.now(timezone.utc)
 
-        logger.info(
-            "Product received — awaiting selfie (tenant: %s, category: %s)",
-            tenant.business_name,
-            session.pending_category,
-        )
+            await send_text_message(
+                phone_number=phone_number,
+                message=MESSAGES["processing"],
+                phone_number_id=tenant.phone_number_id,
+            )
+
+            job_id = await _create_tryon_job(
+                tenant_id=tenant.id,
+                customer_id=customer_id,
+                category=session.pending_category or "apparel",
+                selfie_path=session.pending_selfie_url.split("?")[0].split("/")[-1], # Hacky way to get path from URL, or we can just pass None since it's just for DB tracking
+            )
+            session.current_job_id = job_id
+
+            await _run_tryon_generation(
+                phone_number=phone_number,
+                selfie_url=session.pending_selfie_url,
+                product_url=product_url,
+                category=session.pending_category or "apparel",
+                job_id=job_id,
+                tenant=tenant,
+                session=session,
+                customer_id=customer_id,
+            )
+        else:
+            # We don't have the selfie yet, ask for it
+            session.state = SessionState.AWAITING_SELFIE
+            session.last_updated = datetime.now(timezone.utc)
+
+            await send_text_message(
+                phone_number=phone_number,
+                message=MESSAGES["awaiting_selfie"],
+                phone_number_id=tenant.phone_number_id,
+            )
+
+            logger.info(
+                "Product received — awaiting selfie (tenant: %s, category: %s)",
+                tenant.business_name,
+                session.pending_category,
+            )
 
     except Exception as e:
         logger.error("Failed to handle product image: %s", str(e))

@@ -50,10 +50,12 @@ app.add_middleware(
 from api.webhook import router as webhook_router
 from api.health import router as health_router
 from api.admin import router as admin_router
+from api.privacy import router as privacy_router
 
 app.include_router(webhook_router)
 app.include_router(health_router)
 app.include_router(admin_router)
+app.include_router(privacy_router)
 
 
 # ── Startup Event ─────────────────────────────────────────────

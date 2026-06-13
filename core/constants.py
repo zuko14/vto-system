@@ -611,7 +611,7 @@ IMAGE_TYPE_BUTTONS = {
                 },
                 {
                     "type": "reply",
-                    "reply": {"id": "type_product", "title": "An Outfit 👕"},
+                    "reply": {"id": "type_product", "title": "An Outfit"},
                 },
             ]
         },

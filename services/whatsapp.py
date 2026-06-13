@@ -267,6 +267,10 @@ def extract_message_data(webhook_body: dict) -> Optional[Dict[str, Any]]:
         elif message_type == "image":
             media_id = message.get("image", {}).get("id", "")
             text = message.get("image", {}).get("caption", "")
+        elif message_type == "document":
+            media_id = message.get("document", {}).get("id", "")
+            text = message.get("document", {}).get("caption", "")
+            message_type = "image"  # Treat documents as images for our flows
         elif message_type == "audio":
             media_id = message.get("audio", {}).get("id", "")
         elif message_type == "interactive":

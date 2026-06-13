@@ -89,12 +89,16 @@ async def route_message(
     # For users without consent: only allow DELETE and HELP through.
     # Everything else (including greeting, images, try-on) goes to
     # consent_flow first. This prevents the triple-message bug.
+    #
+    # IMPORTANT: Also catch consent keywords (AGREE, YES, etc.) here
+    # so they work even if in-memory session was lost (multi-worker).
     has_consent = customer_data and customer_data.get("consent_given", False)
 
     if not has_consent:
-        # Allow deletion even without consent
         if message_type == "text" and text:
             upper = text.strip().upper()
+
+            # Allow deletion even without consent
             if upper in ("DELETE", "MUJHE HATAO", "REMOVE ME"):
                 return {
                     "flow": "deletion_flow",
@@ -102,12 +106,29 @@ async def route_message(
                     "intent": Intent.CONSENT_WITHDRAW,
                     "text": text,
                 }
+
             # Allow HELP without consent
             if upper in ("HELP", "MADAD"):
                 return {
                     "flow": "help_flow",
                     "action": "help",
                     "intent": Intent.HELP,
+                    "text": text,
+                }
+
+            # Recognize consent keywords (AGREE, YES, OK, HAAN, etc.)
+            # This handles the case where session state was lost across
+            # workers or restarts — we process AGREE regardless.
+            consent_keywords = {
+                "AGREE", "I AGREE", "YES", "OK",
+                "HAAN", "HA", "हां", "అవును",
+                "ஆம்", "OKAY", "SURE",
+            }
+            if upper in consent_keywords:
+                return {
+                    "flow": "consent_flow",
+                    "action": "check_response",
+                    "intent": Intent.CONSENT_GIVE,
                     "text": text,
                 }
 

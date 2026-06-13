@@ -1,0 +1,14 @@
+# render.yaml — Render.com deployment configuration
+services:
+  - type: web
+    name: zukolabs-vto
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 4
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.11"

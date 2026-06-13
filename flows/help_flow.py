@@ -3,12 +3,13 @@ ZukoLabs VTO — Help Flow
 
 Handles help requests, greetings, and unknown intents.
 Sends capability listing and usage instructions.
+All messages are language-aware.
 """
 
 import logging
 from typing import Any, Dict
 
-from core.constants import MESSAGES
+from core.constants import get_message
 from models.customer import CustomerSession
 from models.tenant import Tenant
 from services.whatsapp import send_text_message
@@ -20,6 +21,7 @@ async def handle_help(
     phone_number: str,
     tenant: Tenant,
     action: str = "help",
+    language: str = "en",
 ) -> None:
     """
     Handle help, greeting, and unknown intent messages.
@@ -28,22 +30,25 @@ async def handle_help(
         phone_number: Customer's phone number.
         tenant: Tenant object.
         action: The specific action (help, greeting, unknown, etc.).
+        language: Customer's language code (en, hi, te, ta).
     """
     if action == "greeting":
-        # Use custom greeting if tenant has one, otherwise default
-        greeting = (
-            tenant.settings.custom_greeting
-            or MESSAGES["greeting"]
-        )
+        # Use custom greeting if tenant has one, otherwise language-aware default
+        if tenant.settings.custom_greeting:
+            message = tenant.settings.custom_greeting
+        else:
+            message = get_message(
+                "greeting", language, business_name=tenant.business_name
+            )
         await send_text_message(
             phone_number=phone_number,
-            message=greeting,
+            message=message,
             phone_number_id=tenant.phone_number_id,
         )
 
     elif action == "help":
         # Build help message based on tenant's plan features
-        help_text = _build_help_message(tenant)
+        help_text = _build_help_message(tenant, language)
         await send_text_message(
             phone_number=phone_number,
             message=help_text,
@@ -53,9 +58,10 @@ async def handle_help(
     elif action == "feature_not_available":
         await send_text_message(
             phone_number=phone_number,
-            message=(
-                "Yeh feature aapke current plan mein available nahi hai. 😊\n"
-                f"{tenant.business_name} se baat karo upgrade ke liye!"
+            message=get_message(
+                "feature_not_available",
+                language,
+                business_name=tenant.business_name,
             ),
             phone_number_id=tenant.phone_number_id,
         )
@@ -63,17 +69,14 @@ async def handle_help(
     elif action == "voice_not_understood":
         await send_text_message(
             phone_number=phone_number,
-            message=(
-                "Voice message samajh nahi aaya 😅\n"
-                "Text mein bhejo ya 'help' likh ke bhejo."
-            ),
+            message=get_message("voice_not_understood", language),
             phone_number_id=tenant.phone_number_id,
         )
 
     elif action == "empty_message":
         await send_text_message(
             phone_number=phone_number,
-            message="Kuch to bhejo! 😄 'help' bhejo options dekhne ke liye.",
+            message=get_message("empty_message", language),
             phone_number_id=tenant.phone_number_id,
         )
 
@@ -81,54 +84,54 @@ async def handle_help(
         # Unknown intent
         await send_text_message(
             phone_number=phone_number,
-            message=MESSAGES["unknown_intent"],
+            message=get_message("unknown_intent", language),
             phone_number_id=tenant.phone_number_id,
         )
 
-    logger.debug("Help flow: action=%s, tenant=%s", action, tenant.business_name)
+    logger.debug("Help flow: action=%s, tenant=%s, lang=%s", action, tenant.business_name, language)
 
 
-def _build_help_message(tenant: Tenant) -> str:
+def _build_help_message(tenant: Tenant, language: str = "en") -> str:
     """
     Build a help message customized for the tenant's plan features.
 
     Args:
         tenant: Tenant object.
+        language: Customer's language code.
 
     Returns:
         Formatted help text.
     """
     lines = [
         f"*{tenant.business_name}* Virtual Try-On 👗\n",
-        "Main kya kar sakta hoon:\n",
-        "👗 *Outfit Try-On* — Product photo bhejo",
     ]
+
+    # Add base help message
+    lines.append(get_message("help", language))
 
     # Add plan-specific features
     categories = tenant.supported_categories
-    if "jewelry" in categories:
-        lines.append("💍 *Jewellery Try-On*")
-    if "eyewear" in categories:
-        lines.append("👓 *Eyewear Try-On*")
-    if "footwear" in categories:
-        lines.append("👟 *Footwear Try-On*")
-    if "watch" in categories:
-        lines.append("⌚ *Watch Try-On*")
-    if "makeup" in categories:
-        lines.append("💄 *Makeup Try-On*")
 
+    extra = []
     if tenant.has_feature("occasion_agent"):
-        lines.append("\n🎉 *Occasion Outfit* — 'wedding outfit' ya 'office look' bhejo")
+        occasion_labels = {
+            "en": "\n🎉 *Occasion Outfit* — send 'wedding outfit' or 'office look'",
+            "hi": "\n🎉 *Occasion Outfit* — 'wedding outfit' ya 'office look' bhejo",
+            "te": "\n🎉 *Occasion Outfit* — 'wedding outfit' లేదా 'office look' పంపండి",
+            "ta": "\n🎉 *Occasion Outfit* — 'wedding outfit' அல்லது 'office look' அனுப்புங்கள்",
+        }
+        extra.append(occasion_labels.get(language, occasion_labels["en"]))
 
     if tenant.has_feature("fit_verification"):
-        lines.append("📐 *Fit Check* — Wearing photo bhejo")
+        fit_labels = {
+            "en": "📐 *Fit Check* — send your wearing photo",
+            "hi": "📐 *Fit Check* — wearing photo bhejo",
+            "te": "📐 *Fit Check* — wearing photo పంపండి",
+            "ta": "📐 *Fit Check* — wearing photo அனுப்புங்கள்",
+        }
+        extra.append(fit_labels.get(language, fit_labels["en"]))
 
-    if tenant.catalog_enabled:
-        lines.append("\n🛍️ *Catalog* — CATALOG bhejo")
-
-    lines.extend([
-        "\n🗑️ *Data Delete* — DELETE bhejo",
-        "❓ *Help* — HELP bhejo",
-    ])
+    if extra:
+        lines.extend(extra)
 
     return "\n".join(lines)

@@ -231,55 +231,272 @@ FALLBACK_BEHAVIOR = {
 
 
 # ═══════════════════════════════════════════════════════════════
-# MESSAGE TEMPLATES
+# MESSAGE TEMPLATES (Multi-Language)
 # ═══════════════════════════════════════════════════════════════
 
-MESSAGES = {
-    "greeting": (
-        "Namaste! 👋 Hum aapke virtual try-on assistant hain. "
-        "Koi bhi outfit try karna ho, photo bhejo!"
-    ),
-    "awaiting_selfie": (
-        "📸 Ab apni selfie bhejo!\n"
-        "Tips:\n"
-        "• Achhi lighting\n"
-        "• Clear face\n"
-        "• Plain background\n"
-        "• Front-facing"
-    ),
-    "processing": "✨ Aapka look generate ho raha hai...\n(20-30 seconds)",
-    "tryon_complete": "🎉 Yeh raha aapka look!\n\n",
-    "plan_limit_reached": (
-        "Aaj ke try-ons khatam ho gaye 😊 "
-        "Kal dobara try karo, ya {seller_name} se baat karo upgrade ke liye."
-    ),
-    "invalid_selfie": "Yeh selfie clear nahi hai. Ek aur try karo? 😊",
-    "help": (
-        "Main kya kar sakta hoon:\n"
-        "👗 Outfit try-on: product photo bhejo\n"
-        "💍 Jewellery try-on\n"
-        "🗑️ Data delete: DELETE bhejo\n"
-        "🛍️ Catalog: CATALOG bhejo"
-    ),
-    "unknown_intent": "Samajh nahi aaya 😅 'help' bhejo options dekhne ke liye",
-    "tryon_failed": (
-        "Try-on abhi available nahi hai. "
-        "2 minutes mein dobara try karo 🙏"
-    ),
-    "processing_delay": (
-        "Thoda time lag raha hai... ⏳ "
-        "Please wait, hum koshish kar rahe hain."
-    ),
-    "unknown_error": (
-        "Kuch galat ho gaya 😔 "
-        "Please dobara try karo ya 'help' bhejo."
-    ),
-    "deletion_complete": (
-        "Aapka sara data delete ho gaya. ✅\n"
-        "Agar dobara use karna ho, AGREE bhejke restart kar sakte ho."
-    ),
-    "consent_declined": "No problem! Jab bhi ready ho, AGREE bhejo.",
+MESSAGES_I18N = {
+    "en": {
+        "greeting": (
+            "Hello! 👋 Welcome to {business_name} Virtual Try-On. "
+            "Send any outfit photo to try it on!"
+        ),
+        "awaiting_selfie": (
+            "📸 Now send your selfie!\n"
+            "Tips:\n"
+            "• Good lighting\n"
+            "• Clear face\n"
+            "• Plain background\n"
+            "• Front-facing"
+        ),
+        "processing": "✨ Generating your look...\n(20-30 seconds)",
+        "tryon_complete": "🎉 Here's your look!\n\n",
+        "plan_limit_reached": (
+            "You've used all your try-ons for today 😊 "
+            "Try again tomorrow, or contact {seller_name} to upgrade."
+        ),
+        "invalid_selfie": "That doesn't look like a clear selfie. Try again? 😊",
+        "help": (
+            "Here's what I can do:\n"
+            "👗 Outfit try-on — send a product photo\n"
+            "💍 Jewellery try-on\n"
+            "🗑️ Delete data — send DELETE\n"
+            "🛍️ Browse catalog — send CATALOG"
+        ),
+        "unknown_intent": "I didn't understand that 😅 Send 'help' to see options.",
+        "empty_message": "Send me something! 😄 Type 'help' to see options.",
+        "tryon_failed": (
+            "Try-on is not available right now. "
+            "Please try again in 2 minutes 🙏"
+        ),
+        "processing_delay": (
+            "Taking a bit longer... ⏳ "
+            "Please wait, we're working on it."
+        ),
+        "unknown_error": (
+            "Something went wrong 😔 "
+            "Please try again or send 'help'."
+        ),
+        "deletion_complete": (
+            "All your data has been deleted. ✅\n"
+            "If you want to use again, send AGREE to restart."
+        ),
+        "consent_declined": "No problem! Whenever you're ready, send AGREE.",
+        "consent_confirmed": (
+            "Thank you! ✅ You can now use virtual try-on. "
+            "Send any outfit photo! 👗"
+        ),
+        "feature_not_available": (
+            "This feature is not available on your current plan 😊\n"
+            "Contact {business_name} to upgrade!"
+        ),
+        "voice_not_understood": (
+            "I couldn't understand that voice message 😅\n"
+            "Try sending a text or type 'help'."
+        ),
+    },
+    "hi": {
+        "greeting": (
+            "Namaste! 👋 {business_name} Virtual Try-On mein aapka swagat hai. "
+            "Koi bhi outfit photo bhejo!"
+        ),
+        "awaiting_selfie": (
+            "📸 Ab apni selfie bhejo!\n"
+            "Tips:\n"
+            "• Achhi lighting\n"
+            "• Clear face\n"
+            "• Plain background\n"
+            "• Front-facing"
+        ),
+        "processing": "✨ Aapka look generate ho raha hai...\n(20-30 seconds)",
+        "tryon_complete": "🎉 Yeh raha aapka look!\n\n",
+        "plan_limit_reached": (
+            "Aaj ke try-ons khatam ho gaye 😊 "
+            "Kal dobara try karo, ya {seller_name} se baat karo upgrade ke liye."
+        ),
+        "invalid_selfie": "Yeh selfie clear nahi hai. Ek aur try karo? 😊",
+        "help": (
+            "Main kya kar sakta hoon:\n"
+            "👗 Outfit try-on: product photo bhejo\n"
+            "💍 Jewellery try-on\n"
+            "🗑️ Data delete: DELETE bhejo\n"
+            "🛍️ Catalog: CATALOG bhejo"
+        ),
+        "unknown_intent": "Samajh nahi aaya 😅 'help' bhejo options dekhne ke liye",
+        "empty_message": "Kuch to bhejo! 😄 'help' bhejo options dekhne ke liye.",
+        "tryon_failed": (
+            "Try-on abhi available nahi hai. "
+            "2 minutes mein dobara try karo 🙏"
+        ),
+        "processing_delay": (
+            "Thoda time lag raha hai... ⏳ "
+            "Please wait, hum koshish kar rahe hain."
+        ),
+        "unknown_error": (
+            "Kuch galat ho gaya 😔 "
+            "Please dobara try karo ya 'help' bhejo."
+        ),
+        "deletion_complete": (
+            "Aapka sara data delete ho gaya. ✅\n"
+            "Agar dobara use karna ho, AGREE bhejke restart kar sakte ho."
+        ),
+        "consent_declined": "No problem! Jab bhi ready ho, AGREE bhejo.",
+        "consent_confirmed": (
+            "Dhanyavaad! ✅ Ab aap virtual try-on use kar sakte ho. "
+            "Koi bhi outfit photo bhejo! 👗"
+        ),
+        "feature_not_available": (
+            "Yeh feature aapke current plan mein available nahi hai 😊\n"
+            "{business_name} se baat karo upgrade ke liye!"
+        ),
+        "voice_not_understood": (
+            "Voice message samajh nahi aaya 😅\n"
+            "Text mein bhejo ya 'help' likh ke bhejo."
+        ),
+    },
+    "te": {
+        "greeting": (
+            "నమస్కారం! 👋 {business_name} Virtual Try-On కి స్వాగతం. "
+            "ఏ outfit photo అయినా పంపండి!"
+        ),
+        "awaiting_selfie": (
+            "📸 ఇప్పుడు మీ selfie పంపండి!\n"
+            "Tips:\n"
+            "• మంచి lighting\n"
+            "• Clear face\n"
+            "• Plain background\n"
+            "• Front-facing"
+        ),
+        "processing": "✨ మీ look generate అవుతోంది...\n(20-30 seconds)",
+        "tryon_complete": "🎉 ఇదిగో మీ look!\n\n",
+        "plan_limit_reached": (
+            "ఈ రోజు try-ons అయిపోయాయి 😊 "
+            "రేపు మళ్ళీ try చేయండి, లేదా {seller_name} ని contact చేయండి."
+        ),
+        "invalid_selfie": "ఇది clear selfie కాదు. మళ్ళీ try చేయండి? 😊",
+        "help": (
+            "నేను ఏమి చేయగలను:\n"
+            "👗 Outfit try-on — product photo పంపండి\n"
+            "💍 Jewellery try-on\n"
+            "🗑️ Data delete — DELETE పంపండి\n"
+            "🛍️ Catalog — CATALOG పంపండి"
+        ),
+        "unknown_intent": "అర్థం కాలేదు 😅 'help' పంపి options చూడండి.",
+        "empty_message": "ఏదైనా పంపండి! 😄 'help' టైప్ చేసి options చూడండి.",
+        "tryon_failed": (
+            "Try-on ఇప్పుడు available కాదు. "
+            "2 minutes లో మళ్ళీ try చేయండి 🙏"
+        ),
+        "processing_delay": (
+            "కొంచెం ఆలస్యం అవుతోంది... ⏳ "
+            "దయచేసి wait చేయండి."
+        ),
+        "unknown_error": (
+            "ఏదో తప్పు జరిగింది 😔 "
+            "మళ్ళీ try చేయండి లేదా 'help' పంపండి."
+        ),
+        "deletion_complete": (
+            "మీ data అంతా delete అయింది. ✅\n"
+            "మళ్ళీ use చేయాలంటే, AGREE పంపి restart చేయండి."
+        ),
+        "consent_declined": "ఫర్వాలేదు! మీరు ready అయినప్పుడు AGREE పంపండి.",
+        "consent_confirmed": (
+            "ధన్యవాదాలు! ✅ ఇప్పుడు virtual try-on use చేయవచ్చు. "
+            "ఏ outfit photo అయినా పంపండి! 👗"
+        ),
+        "feature_not_available": (
+            "ఈ feature మీ plan లో available కాదు 😊\n"
+            "{business_name} ని contact చేసి upgrade చేయండి!"
+        ),
+        "voice_not_understood": (
+            "Voice message అర్థం కాలేదు 😅\n"
+            "Text లో పంపండి లేదా 'help' టైప్ చేయండి."
+        ),
+    },
+    "ta": {
+        "greeting": (
+            "வணக்கம்! 👋 {business_name} Virtual Try-On க்கு வரவேற்கிறோம்! "
+            "ஏதாவது outfit photo அனுப்புங்கள்!"
+        ),
+        "awaiting_selfie": (
+            "📸 இப்போது உங்கள் selfie அனுப்புங்கள்!\n"
+            "Tips:\n"
+            "• நல்ல lighting\n"
+            "• Clear face\n"
+            "• Plain background\n"
+            "• Front-facing"
+        ),
+        "processing": "✨ உங்கள் look உருவாக்கப்படுகிறது...\n(20-30 seconds)",
+        "tryon_complete": "🎉 இதோ உங்கள் look!\n\n",
+        "plan_limit_reached": (
+            "இன்றைய try-ons முடிந்தது 😊 "
+            "நாளை மீண்டும் முயற்சிக்கவும், அல்லது {seller_name} ஐ தொடர்பு கொள்ளுங்கள்."
+        ),
+        "invalid_selfie": "இது clear selfie அல்ல. மீண்டும் முயற்சிக்கவும்? 😊",
+        "help": (
+            "நான் என்ன செய்ய முடியும்:\n"
+            "👗 Outfit try-on — product photo அனுப்புங்கள்\n"
+            "💍 Jewellery try-on\n"
+            "🗑️ Data delete — DELETE அனுப்புங்கள்\n"
+            "🛍️ Catalog — CATALOG அனுப்புங்கள்"
+        ),
+        "unknown_intent": "புரியவில்லை 😅 'help' அனுப்பி options பாருங்கள்.",
+        "empty_message": "ஏதாவது அனுப்புங்கள்! 😄 'help' அனுப்பி options பாருங்கள்.",
+        "tryon_failed": (
+            "Try-on இப்போது available இல்லை. "
+            "2 minutes ல் மீண்டும் முயற்சிக்கவும் 🙏"
+        ),
+        "processing_delay": (
+            "கொஞ்சம் தாமதமாகிறது... ⏳ "
+            "தயவுசெய்து காத்திருங்கள்."
+        ),
+        "unknown_error": (
+            "ஏதோ தவறு ஏற்பட்டது 😔 "
+            "மீண்டும் முயற்சிக்கவும் அல்லது 'help' அனுப்புங்கள்."
+        ),
+        "deletion_complete": (
+            "உங்கள் data அனைத்தும் delete ஆகிவிட்டது. ✅\n"
+            "மீண்டும் பயன்படுத்த, AGREE அனுப்பி restart செய்யுங்கள்."
+        ),
+        "consent_declined": "பரவாயில்லை! நீங்கள் ready ஆனால் AGREE அனுப்புங்கள்.",
+        "consent_confirmed": (
+            "நன்றி! ✅ இப்போது virtual try-on பயன்படுத்தலாம். "
+            "ஏதாவது outfit photo அனுப்புங்கள்! 👗"
+        ),
+        "feature_not_available": (
+            "இந்த feature உங்கள் plan ல் available இல்லை 😊\n"
+            "{business_name} ஐ தொடர்பு கொண்டு upgrade செய்யுங்கள்!"
+        ),
+        "voice_not_understood": (
+            "Voice message புரியவில்லை 😅\n"
+            "Text ல் அனுப்புங்கள் அல்லது 'help' type செய்யுங்கள்."
+        ),
+    },
 }
+
+# Backward-compatible alias (defaults to Hindi for existing code)
+MESSAGES = MESSAGES_I18N["hi"]
+
+
+def get_message(key: str, language: str = "en", **kwargs) -> str:
+    """
+    Get a message in the specified language, falling back to English.
+
+    Args:
+        key: Message key (e.g., 'greeting', 'help').
+        language: ISO 639-1 language code.
+        **kwargs: Format substitutions (e.g., business_name, seller_name).
+
+    Returns:
+        Formatted message string.
+    """
+    lang_messages = MESSAGES_I18N.get(language, MESSAGES_I18N["en"])
+    msg = lang_messages.get(key, MESSAGES_I18N["en"].get(key, ""))
+    if kwargs:
+        try:
+            return msg.format(**kwargs)
+        except KeyError:
+            return msg
+    return msg
 
 # Consent message template (supports language substitution)
 CONSENT_TEMPLATES = {

@@ -14,7 +14,7 @@ from typing import Dict
 
 from fastapi import APIRouter, BackgroundTasks, Request, Response
 
-from core.constants import Intent, SessionState, MESSAGES
+from core.constants import Intent, SessionState, MESSAGES, get_message
 from core.security import verify_webhook_signature, hash_phone_number
 from core.config import get_settings
 from core.database import get_db
@@ -197,13 +197,16 @@ async def _process_message(message_data: dict) -> None:
                     "last_active": datetime.now(timezone.utc).isoformat(),
                 }).eq("id", consent_info["customer_id"]).execute()
 
+        # Determine customer language: customer preference > tenant default > en
+        language = customer_data.get("language") or tenant.language or "en"
+
         # 6. Handle voice messages (transcribe first)
         if message_type == "audio" and media_id:
             if tenant.has_feature("voice_support"):
                 audio_bytes = await download_media(media_id)
                 transcription = await transcribe_audio(
                     audio_bytes,
-                    language_hint=customer_data.get("language", "en"),
+                    language_hint=language,
                 )
                 if transcription["success"]:
                     text = transcription["text"]
@@ -219,11 +222,12 @@ async def _process_message(message_data: dict) -> None:
                             "language": transcription["language"],
                         }).eq("id", consent_info["customer_id"]).execute()
                         customer_data["language"] = transcription["language"]
+                        language = transcription["language"]
                 else:
-                    await handle_help(from_number, tenant, "voice_not_understood")
+                    await handle_help(from_number, tenant, "voice_not_understood", language)
                     return
             else:
-                await handle_help(from_number, tenant, "feature_not_available")
+                await handle_help(from_number, tenant, "feature_not_available", language)
                 return
 
         # 7. Route message to correct flow
@@ -247,6 +251,7 @@ async def _process_message(message_data: dict) -> None:
             customer_data=customer_data,
             media_id=media_id,
             text=text,
+            language=language,
         )
 
     except Exception as e:
@@ -257,7 +262,7 @@ async def _process_message(message_data: dict) -> None:
             exc_info=True,
         )
         try:
-            await handle_help(from_number, tenant, "unknown")
+            await handle_help(from_number, tenant, "unknown", language)
         except Exception:
             pass
 
@@ -271,6 +276,7 @@ async def _execute_flow(
     customer_data: dict,
     media_id: str = None,
     text: str = "",
+    language: str = "en",
 ) -> None:
     """Execute the flow handler based on routing result."""
 
@@ -284,7 +290,7 @@ async def _execute_flow(
                 phone_number=phone_number,
                 tenant=tenant,
                 session=session,
-                language=customer_data.get("language", "en"),
+                language=language,
             )
         elif action == "check_response":
             await handle_consent_response(
@@ -294,6 +300,7 @@ async def _execute_flow(
                 tenant=tenant,
                 session=session,
                 customer_id=customer_id,
+                language=language,
             )
 
     elif flow == "tryon_flow":
@@ -318,12 +325,12 @@ async def _execute_flow(
             from services.whatsapp import send_text_message
             await send_text_message(
                 phone_number=phone_number,
-                message=route.get("message", MESSAGES["awaiting_selfie"]),
+                message=get_message("awaiting_selfie", language),
                 phone_number_id=tenant.phone_number_id,
             )
         elif action == "start_new":
             session.reset()
-            await handle_help(phone_number, tenant, "greeting")
+            await handle_help(phone_number, tenant, "greeting", language)
 
     elif flow == "occasion_agent":
         await handle_occasion_request(
@@ -365,11 +372,11 @@ async def _execute_flow(
     elif flow == "help_flow":
         intent = route.get("intent", Intent.HELP)
         if intent == Intent.GREETING:
-            await handle_help(phone_number, tenant, "greeting")
+            await handle_help(phone_number, tenant, "greeting", language)
         elif action in ("feature_not_available", "voice_not_understood", "empty_message"):
-            await handle_help(phone_number, tenant, action)
+            await handle_help(phone_number, tenant, action, language)
         else:
-            await handle_help(phone_number, tenant, "help")
+            await handle_help(phone_number, tenant, "help", language)
 
     else:
-        await handle_help(phone_number, tenant, "unknown")
+        await handle_help(phone_number, tenant, "unknown", language)

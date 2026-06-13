@@ -85,17 +85,42 @@ async def route_message(
             "text": text,
         }
 
-    # ── 3. Handle image messages (product photo or selfie) ────
-    if message_type == "image" and media_id:
-        # Check consent first
-        if customer_data and not customer_data.get("consent_given", False):
-            return {
-                "flow": "consent_flow",
-                "action": "request_consent",
-                "intent": Intent.TRYON_SINGLE,
-                "deferred_media_id": media_id,
-            }
+    # ── 3. CONSENT GATE ─────────────────────────────────────
+    # For users without consent: only allow DELETE and HELP through.
+    # Everything else (including greeting, images, try-on) goes to
+    # consent_flow first. This prevents the triple-message bug.
+    has_consent = customer_data and customer_data.get("consent_given", False)
 
+    if not has_consent:
+        # Allow deletion even without consent
+        if message_type == "text" and text:
+            upper = text.strip().upper()
+            if upper in ("DELETE", "MUJHE HATAO", "REMOVE ME"):
+                return {
+                    "flow": "deletion_flow",
+                    "action": "handle",
+                    "intent": Intent.CONSENT_WITHDRAW,
+                    "text": text,
+                }
+            # Allow HELP without consent
+            if upper in ("HELP", "MADAD"):
+                return {
+                    "flow": "help_flow",
+                    "action": "help",
+                    "intent": Intent.HELP,
+                    "text": text,
+                }
+
+        # Everything else (greeting, image, product, etc.) → consent first
+        return {
+            "flow": "consent_flow",
+            "action": "request_consent",
+            "intent": Intent.GREETING,
+            "deferred_media_id": media_id,
+        }
+
+    # ── 4. Handle image messages (product photo or selfie) ────
+    if message_type == "image" and media_id:
         return {
             "flow": "tryon_flow",
             "action": "receive_product",
@@ -104,7 +129,7 @@ async def route_message(
             "caption": text,
         }
 
-    # ── 4. Handle voice messages ──────────────────────────────
+    # ── 5. Handle voice messages ──────────────────────────────
     if message_type == "audio" and media_id:
         # Voice is handled upstream (transcribed before reaching here)
         # If we reach here, transcription failed
@@ -114,7 +139,7 @@ async def route_message(
             "intent": Intent.UNKNOWN,
         }
 
-    # ── 5. Classify intent for text messages ──────────────────
+    # ── 6. Classify intent for text messages ──────────────────
     if not text:
         return {
             "flow": "help_flow",
@@ -127,23 +152,7 @@ async def route_message(
 
     logger.info("Intent classified: %s for text: '%s...'", intent.value, text[:50])
 
-    # ── 6. Check consent for flows that process photos ────────
-    consent_required_intents = {
-        Intent.TRYON_SINGLE,
-        Intent.TRYON_OCCASION,
-        Intent.FIT_CHECK,
-    }
-
-    if intent in consent_required_intents:
-        if customer_data and not customer_data.get("consent_given", False):
-            return {
-                "flow": "consent_flow",
-                "action": "request_consent",
-                "intent": intent,
-                "deferred_text": text,
-            }
-
-    # ── 7. Route to the correct flow ──────────────────────────
+    # ── 7. Route to the correct flow (consent already verified above) ──────
     flow_map = {
         Intent.TRYON_SINGLE: "tryon_flow",
         Intent.TRYON_OCCASION: "occasion_agent",

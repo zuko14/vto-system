@@ -14,6 +14,7 @@ from core.constants import (
     SessionState,
     CONSENT_TEMPLATES,
     MESSAGES,
+    get_message,
 )
 from core.database import get_db
 from models.customer import CustomerSession
@@ -71,6 +72,7 @@ async def handle_consent_response(
     tenant: Tenant,
     session: CustomerSession,
     customer_id: Optional[str] = None,
+    language: str = "en",
 ) -> bool:
     """
     Process the customer's response to the consent message.
@@ -106,10 +108,7 @@ async def handle_consent_response(
         # Send confirmation
         await send_text_message(
             phone_number=phone_number,
-            message=(
-                "Thank you! ✅ Ab aap virtual try-on use kar sakte ho. "
-                "Koi bhi outfit photo bhejo! 👗"
-            ),
+            message=get_message("consent_confirmed", language),
             phone_number_id=tenant.phone_number_id,
         )
 
@@ -126,7 +125,7 @@ async def handle_consent_response(
         # Consent declined
         await send_text_message(
             phone_number=phone_number,
-            message=MESSAGES["consent_declined"],
+            message=get_message("consent_declined", language),
             phone_number_id=tenant.phone_number_id,
         )
 

@@ -30,6 +30,7 @@ class Intent(str, Enum):
 class SessionState(str, Enum):
     """Customer session states for the try-on flow state machine."""
     IDLE = "idle"
+    AWAITING_LANGUAGE = "awaiting_language"
     AWAITING_SELFIE = "awaiting_selfie"
     PROCESSING = "processing"
     POST_TRYON = "post_tryon"
@@ -536,6 +537,48 @@ CONSENT_TEMPLATES = {
         "Privacy Policy: {privacy_url}\n\n"
         "AGREE அனுப்புங்கள் 👇"
     ),
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# LANGUAGE PICKER BUTTONS (WhatsApp)
+# ═══════════════════════════════════════════════════════════════
+
+LANGUAGE_PICKER_BUTTONS = {
+    "type": "interactive",
+    "interactive": {
+        "type": "button",
+        "body": {
+            "text": (
+                "Welcome! 👋 Please choose your language:\n"
+                "భాషను ఎంచుకోండి / भाषा चुनें"
+            )
+        },
+        "action": {
+            "buttons": [
+                {
+                    "type": "reply",
+                    "reply": {"id": "lang_en", "title": "English"},
+                },
+                {
+                    "type": "reply",
+                    "reply": {"id": "lang_hi", "title": "हिंदी"},
+                },
+                {
+                    "type": "reply",
+                    "reply": {"id": "lang_te", "title": "తెలుగు"},
+                },
+            ]
+        },
+    },
+}
+
+# Map button IDs to language codes
+LANGUAGE_BUTTON_MAP = {
+    "lang_en": "en",
+    "lang_hi": "hi",
+    "lang_te": "te",
+    "lang_ta": "ta",
 }
 
 

@@ -53,6 +53,7 @@ class CustomerSession(BaseModel):
     phone_hash: str
     tenant_id: str
     state: SessionState = SessionState.IDLE
+    pending_language: Optional[str] = None
     pending_product_url: Optional[str] = None
     pending_product_id: Optional[str] = None
     pending_selfie_url: Optional[str] = None

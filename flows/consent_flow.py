@@ -103,6 +103,7 @@ async def handle_consent_response(
             tenant_id=tenant.id,
             customer_id=customer_id,
             action=ConsentAction.GIVEN,
+            language=language,
         )
 
         # Send confirmation
@@ -143,6 +144,7 @@ async def _record_consent(
     tenant_id: str,
     customer_id: Optional[str],
     action: ConsentAction,
+    language: str = "en",
 ) -> None:
     """
     Record consent action in the database.
@@ -165,6 +167,7 @@ async def _record_consent(
             db.table("customers").update({
                 "consent_given": action == ConsentAction.GIVEN,
                 "consent_at": now if action == ConsentAction.GIVEN else None,
+                "language": language,
                 "last_active": now,
             }).eq("id", customer_id).eq("tenant_id", tenant_id).execute()
         else:
@@ -174,6 +177,7 @@ async def _record_consent(
                 "phone_hash": phone_hash,
                 "consent_given": action == ConsentAction.GIVEN,
                 "consent_at": now if action == ConsentAction.GIVEN else None,
+                "language": language,
                 "last_active": now,
             }).execute()
 

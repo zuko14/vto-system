@@ -2,13 +2,13 @@
 ZukoLabs VTO — Intent Router
 
 Classifies incoming messages using Groq and routes to the correct flow.
-Checks consent before allowing photo-processing flows.
+New user flow: Language Selection → Consent → Main flows.
 """
 
 import logging
 from typing import Any, Dict, Optional
 
-from core.constants import Intent, SessionState, MESSAGES
+from core.constants import Intent, SessionState, MESSAGES, LANGUAGE_BUTTON_MAP
 from models.customer import CustomerSession
 from models.tenant import Tenant
 from services.groq_client import classify_intent
@@ -28,12 +28,10 @@ async def route_message(
     """
     Route an incoming message to the correct flow handler.
 
-    Process:
-    1. Handle button replies directly
-    2. Check session state for mid-flow routing (e.g., awaiting selfie)
-    3. Classify intent via Groq for text messages
-    4. Check consent before photo-processing flows
-    5. Return routing instructions
+    Flow for new users:
+    1. Language picker (3 buttons: English / हिंदी / తెలుగు)
+    2. Consent request (in selected language)
+    3. Main flow routing
 
     Args:
         text: Message text (or transcription for voice).
@@ -48,11 +46,51 @@ async def route_message(
         Dict with 'flow' (handler name), 'intent', and additional context.
     """
 
-    # ── 1. Handle interactive button replies ──────────────────
+    # ── 1. Handle language picker button replies ──────────────
+    if button_reply_id and button_reply_id in LANGUAGE_BUTTON_MAP:
+        selected_lang = LANGUAGE_BUTTON_MAP[button_reply_id]
+        session.pending_language = selected_lang
+        session.state = SessionState.AWAITING_CONSENT
+        return {
+            "flow": "consent_flow",
+            "action": "request_consent",
+            "intent": Intent.GREETING,
+            "language_override": selected_lang,
+        }
+
+    # ── 2. Handle other interactive button replies ────────────
     if button_reply_id:
         return _route_button_reply(button_reply_id, session, tenant)
 
-    # ── 2. Handle mid-flow states ─────────────────────────────
+    # ── 3. Handle mid-flow states ─────────────────────────────
+    if session.state == SessionState.AWAITING_LANGUAGE:
+        # User sent text instead of tapping a button — try to match language
+        if message_type == "text" and text:
+            upper = text.strip().upper()
+            lang_text_map = {
+                "ENGLISH": "en", "ENG": "en", "EN": "en", "1": "en",
+                "HINDI": "hi", "HIND": "hi", "HI": "hi", "2": "hi",
+                "हिंदी": "hi", "हिन्दी": "hi",
+                "TELUGU": "te", "TEL": "te", "TE": "te", "3": "te",
+                "తెలుగు": "te",
+            }
+            selected = lang_text_map.get(upper)
+            if selected:
+                session.pending_language = selected
+                session.state = SessionState.AWAITING_CONSENT
+                return {
+                    "flow": "consent_flow",
+                    "action": "request_consent",
+                    "intent": Intent.GREETING,
+                    "language_override": selected,
+                }
+        # Didn't understand — re-send language picker
+        return {
+            "flow": "language_flow",
+            "action": "send_picker",
+            "intent": Intent.GREETING,
+        }
+
     if session.state == SessionState.AWAITING_SELFIE:
         if message_type == "image" and media_id:
             return {
@@ -66,7 +104,6 @@ async def route_message(
                 "flow": "tryon_flow",
                 "action": "remind_selfie",
                 "intent": Intent.TRYON_SINGLE,
-                "message": MESSAGES["awaiting_selfie"],
             }
 
     if session.state == SessionState.AWAITING_CONSENT:
@@ -85,14 +122,9 @@ async def route_message(
             "text": text,
         }
 
-    # ── 3. CONSENT GATE ─────────────────────────────────────
-    # For users without consent: only allow DELETE and HELP through.
-    # Everything else (including greeting, images, try-on) goes to
-    # consent_flow first. This prevents the triple-message bug.
-    #
-    # IMPORTANT: Also catch consent keywords (AGREE, YES, etc.) here
-    # so they work even if in-memory session was lost (multi-worker).
+    # ── 4. CONSENT GATE ─────────────────────────────────────
     has_consent = customer_data and customer_data.get("consent_given", False)
+    has_language = customer_data and customer_data.get("language")
 
     if not has_consent:
         if message_type == "text" and text:
@@ -116,9 +148,7 @@ async def route_message(
                     "text": text,
                 }
 
-            # Recognize consent keywords (AGREE, YES, OK, HAAN, etc.)
-            # This handles the case where session state was lost across
-            # workers or restarts — we process AGREE regardless.
+            # Recognize consent keywords (AGREE, YES, etc.)
             consent_keywords = {
                 "AGREE", "I AGREE", "YES", "OK",
                 "HAAN", "HA", "हां", "అవును",
@@ -132,7 +162,15 @@ async def route_message(
                     "text": text,
                 }
 
-        # Everything else (greeting, image, product, etc.) → consent first
+        # New user with no language selected → show language picker first
+        if not has_language and session.pending_language is None:
+            return {
+                "flow": "language_flow",
+                "action": "send_picker",
+                "intent": Intent.GREETING,
+            }
+
+        # Has language but no consent → send consent in their language
         return {
             "flow": "consent_flow",
             "action": "request_consent",
@@ -140,7 +178,7 @@ async def route_message(
             "deferred_media_id": media_id,
         }
 
-    # ── 4. Handle image messages (product photo or selfie) ────
+    # ── 5. Handle image messages (product photo or selfie) ────
     if message_type == "image" and media_id:
         return {
             "flow": "tryon_flow",
@@ -150,17 +188,15 @@ async def route_message(
             "caption": text,
         }
 
-    # ── 5. Handle voice messages ──────────────────────────────
+    # ── 6. Handle voice messages ──────────────────────────────
     if message_type == "audio" and media_id:
-        # Voice is handled upstream (transcribed before reaching here)
-        # If we reach here, transcription failed
         return {
             "flow": "help_flow",
             "action": "voice_not_understood",
             "intent": Intent.UNKNOWN,
         }
 
-    # ── 6. Classify intent for text messages ──────────────────
+    # ── 7. Classify intent for text messages ──────────────────
     if not text:
         return {
             "flow": "help_flow",
@@ -173,7 +209,7 @@ async def route_message(
 
     logger.info("Intent classified: %s for text: '%s...'", intent.value, text[:50])
 
-    # ── 7. Route to the correct flow (consent already verified above) ──────
+    # ── 8. Route to the correct flow ──────────────────────────
     flow_map = {
         Intent.TRYON_SINGLE: "tryon_flow",
         Intent.TRYON_OCCASION: "occasion_agent",
@@ -189,7 +225,6 @@ async def route_message(
 
     flow = flow_map.get(intent, "help_flow")
 
-    # Check if flow requires a plan feature
     feature_map = {
         "occasion_agent": "occasion_agent",
         "fit_verification_flow": "fit_verification",

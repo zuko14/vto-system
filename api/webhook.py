@@ -242,6 +242,9 @@ async def _process_message(message_data: dict) -> None:
         )
 
         # 8. Execute the routed flow
+        # Use language override if router specified one (e.g. from language picker)
+        flow_language = route.get("language_override", language)
+
         await _execute_flow(
             route=route,
             phone_number=from_number,
@@ -251,7 +254,7 @@ async def _process_message(message_data: dict) -> None:
             customer_data=customer_data,
             media_id=media_id,
             text=text,
-            language=language,
+            language=flow_language,
         )
 
     except Exception as e:
@@ -284,7 +287,17 @@ async def _execute_flow(
     action = route.get("action", "handle")
     customer_id = customer_data.get("id", "")
 
-    if flow == "consent_flow":
+    if flow == "language_flow":
+        if action == "send_picker":
+            from services.whatsapp import send_interactive_buttons
+            from core.constants import LANGUAGE_PICKER_BUTTONS
+            await send_interactive_buttons(
+                phone_number=phone_number,
+                interactive_payload=LANGUAGE_PICKER_BUTTONS,
+                phone_number_id=tenant.phone_number_id,
+            )
+
+    elif flow == "consent_flow":
         if action == "request_consent":
             await request_consent(
                 phone_number=phone_number,

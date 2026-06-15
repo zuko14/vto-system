@@ -1,9 +1,12 @@
 """
 ZukoLabs VTO — Deletion Flow (DPDP Right to Erasure)
 
-Handles data deletion requests. Must complete within 5 seconds (target)
-and 90 days (DPDP maximum). Consent log records are NEVER deleted
-(7-year retention requirement).
+Handles data deletion requests. Fully removes all customer data
+from Supabase (customer row, tryon_jobs, images). After deletion,
+the same phone number will start fresh from language selection.
+
+Consent log records are retained for audit (7-year requirement)
+but only store the phone_hash — no PII.
 """
 
 import logging
@@ -32,11 +35,11 @@ async def handle_deletion(
     Handle a data deletion request (DPDP Right to Erasure).
 
     Process:
-    1. Delete all tryon_jobs for this customer
+    1. Hard-delete all tryon_jobs for this customer
     2. Delete output images from Supabase Storage
-    3. Reset customer consent (consent_given = false)
-    4. Insert consent_log record (action: 'deleted')
-    5. Keep consent_log records (7-year legal requirement)
+    3. Hard-delete the customer row from the customers table
+    4. Insert consent_log record (action: 'deleted') — audit trail only
+    5. Clear in-memory session so next message starts fresh
     6. Send confirmation message
 
     Args:
@@ -45,27 +48,23 @@ async def handle_deletion(
         session: Customer session.
         tenant: Tenant object.
         customer_data: Customer DB record.
+        language: Customer's preferred language code.
     """
     db = get_db()
     customer_id = customer_data.get("id")
     now = datetime.now(timezone.utc).isoformat()
 
     try:
-        # 1. Delete all try-on jobs (soft delete with audit trail)
+        # 1. Hard-delete all try-on jobs
         if customer_id:
-            db.table("tryon_jobs").update({
-                "deleted_at": now,
-                "selfie_path": None,
-                "output_path": None,
-                "output_url": None,
-            }).eq(
+            db.table("tryon_jobs").delete().eq(
                 "customer_id", customer_id
             ).eq(
                 "tenant_id", tenant.id
             ).execute()
 
             logger.info(
-                "Soft-deleted tryon_jobs for customer %s",
+                "Hard-deleted tryon_jobs for customer %s",
                 customer_id,
             )
 
@@ -81,20 +80,22 @@ async def handle_deletion(
                 customer_id,
             )
 
-        # 3. Reset customer consent and clear personal data
+        # 3. Hard-delete the customer row (phone_hash, language, consent, etc.)
         if customer_id:
-            db.table("customers").update({
-                "consent_given": False,
-                "consent_at": None,
-                "skin_tone_code": None,
-                "last_active": None,
-            }).eq(
+            db.table("customers").delete().eq(
                 "id", customer_id
             ).eq(
                 "tenant_id", tenant.id
             ).execute()
 
+            logger.info(
+                "Hard-deleted customer row %s for tenant %s",
+                customer_id,
+                tenant.id,
+            )
+
         # 4. Insert consent_log record (audit trail — NEVER delete)
+        # Only stores phone_hash (not raw phone number) — no PII
         db.table("consent_log").insert({
             "tenant_id": tenant.id,
             "phone_hash": phone_hash,
@@ -110,11 +111,14 @@ async def handle_deletion(
             phone_number_id=tenant.phone_number_id,
         )
 
-        # Reset session
+        # 6. Reset in-memory session completely
         session.reset()
 
+        # 7. Also remove from the session cache so next message creates a fresh session
+        _invalidate_session_cache(phone_hash, tenant.id)
+
         logger.info(
-            "Data deletion completed for customer (tenant: %s)",
+            "Full data deletion completed for customer (tenant: %s)",
             tenant.business_name,
         )
 
@@ -122,6 +126,7 @@ async def handle_deletion(
         logger.error(
             "Data deletion failed for customer: %s",
             str(e),
+            exc_info=True,
         )
 
         await send_text_message(
@@ -129,3 +134,18 @@ async def handle_deletion(
             message=get_message("unknown_error", language),
             phone_number_id=tenant.phone_number_id,
         )
+
+
+def _invalidate_session_cache(phone_hash: str, tenant_id: str) -> None:
+    """
+    Remove a customer's session from the in-memory session cache.
+    This forces a fresh session on their next message.
+    """
+    try:
+        from api.webhook import _sessions
+        key = f"{tenant_id}:{phone_hash}"
+        if key in _sessions:
+            del _sessions[key]
+            logger.debug("Invalidated session cache for %s", key)
+    except ImportError:
+        logger.warning("Could not import _sessions for cache invalidation")

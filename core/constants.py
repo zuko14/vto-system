@@ -593,6 +593,67 @@ LANGUAGE_BUTTON_MAP = {
 
 
 # ═══════════════════════════════════════════════════════════════
+# HELP MENU BUTTONS (WhatsApp) — Language-aware
+# ═══════════════════════════════════════════════════════════════
+
+_HELP_BODY = {
+    "en": "Here's what I can do:",
+    "hi": "Main kya kar sakta hoon:",
+    "te": "నేను ఏమి చేయగలను:",
+    "ta": "நான் என்ன செய்ய முடியும்:",
+}
+
+_HELP_TRYON_TITLE = {
+    "en": "Try Outfit 👕",
+    "hi": "Outfit Try 👕",
+    "te": "Outfit Try 👕",
+    "ta": "Outfit Try 👕",
+}
+
+_HELP_DELETE_TITLE = {
+    "en": "Delete My Data 🗑️",
+    "hi": "Data Delete 🗑️",
+    "te": "Data Delete 🗑️",
+    "ta": "Data Delete 🗑️",
+}
+
+_HELP_CATALOG_TITLE = {
+    "en": "Browse Catalog 🛍️",
+    "hi": "Catalog 🛍️",
+    "te": "Catalog 🛍️",
+    "ta": "Catalog 🛍️",
+}
+
+
+def get_help_buttons(language: str = "en") -> dict:
+    """Get help menu buttons localized to the user's language."""
+    lang = language if language in _HELP_BODY else "en"
+    return {
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": _HELP_BODY[lang]},
+            "action": {
+                "buttons": [
+                    {
+                        "type": "reply",
+                        "reply": {"id": "help_tryon", "title": _HELP_TRYON_TITLE[lang]},
+                    },
+                    {
+                        "type": "reply",
+                        "reply": {"id": "help_delete", "title": _HELP_DELETE_TITLE[lang]},
+                    },
+                    {
+                        "type": "reply",
+                        "reply": {"id": "help_catalog", "title": _HELP_CATALOG_TITLE[lang]},
+                    },
+                ]
+            },
+        },
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
 # IMAGE TYPE BUTTONS (WhatsApp) — Language-aware
 # ═══════════════════════════════════════════════════════════════
 

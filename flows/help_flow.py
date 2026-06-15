@@ -2,17 +2,17 @@
 ZukoLabs VTO — Help Flow
 
 Handles help requests, greetings, and unknown intents.
-Sends capability listing and usage instructions.
+Sends interactive buttons for help menu (Try Outfit, Delete Data, Catalog).
 All messages are language-aware.
 """
 
 import logging
 from typing import Any, Dict
 
-from core.constants import get_message
+from core.constants import get_message, get_help_buttons
 from models.customer import CustomerSession
 from models.tenant import Tenant
-from services.whatsapp import send_text_message
+from services.whatsapp import send_text_message, send_interactive_buttons
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +47,42 @@ async def handle_help(
         )
 
     elif action == "help":
-        # Build help message based on tenant's plan features
-        help_text = _build_help_message(tenant, language)
-        await send_text_message(
+        # Send interactive help buttons instead of plain text
+        help_buttons = get_help_buttons(language)
+
+        # Add plan-specific info as header text
+        header_text = f"*{tenant.business_name}* Virtual Try-On 👕"
+        help_buttons["interactive"]["header"] = {
+            "type": "text",
+            "text": header_text,
+        }
+
+        # Add extra feature info to body if available
+        body_parts = [get_message("help", language)]
+
+        if tenant.has_feature("occasion_agent"):
+            occasion_labels = {
+                "en": "\n🎉 *Occasion Outfit* — send 'wedding outfit' or 'office look'",
+                "hi": "\n🎉 *Occasion Outfit* — 'wedding outfit' ya 'office look' bhejo",
+                "te": "\n🎉 *Occasion Outfit* — 'wedding outfit' లేదా 'office look' పంపండి",
+                "ta": "\n🎉 *Occasion Outfit* — 'wedding outfit' அல்லது 'office look' அனுப்புங்கள்",
+            }
+            body_parts.append(occasion_labels.get(language, occasion_labels["en"]))
+
+        if tenant.has_feature("fit_verification"):
+            fit_labels = {
+                "en": "📐 *Fit Check* — send your wearing photo",
+                "hi": "📐 *Fit Check* — wearing photo bhejo",
+                "te": "📐 *Fit Check* — wearing photo పంపండి",
+                "ta": "📐 *Fit Check* — wearing photo அனுப்புங்கள்",
+            }
+            body_parts.append(fit_labels.get(language, fit_labels["en"]))
+
+        help_buttons["interactive"]["body"]["text"] = "\n".join(body_parts)
+
+        await send_interactive_buttons(
             phone_number=phone_number,
-            message=help_text,
+            interactive_payload=help_buttons,
             phone_number_id=tenant.phone_number_id,
         )
 
@@ -89,49 +120,3 @@ async def handle_help(
         )
 
     logger.debug("Help flow: action=%s, tenant=%s, lang=%s", action, tenant.business_name, language)
-
-
-def _build_help_message(tenant: Tenant, language: str = "en") -> str:
-    """
-    Build a help message customized for the tenant's plan features.
-
-    Args:
-        tenant: Tenant object.
-        language: Customer's language code.
-
-    Returns:
-        Formatted help text.
-    """
-    lines = [
-        f"*{tenant.business_name}* Virtual Try-On 👕\n",
-    ]
-
-    # Add base help message
-    lines.append(get_message("help", language))
-
-    # Add plan-specific features
-    categories = tenant.supported_categories
-
-    extra = []
-    if tenant.has_feature("occasion_agent"):
-        occasion_labels = {
-            "en": "\n🎉 *Occasion Outfit* — send 'wedding outfit' or 'office look'",
-            "hi": "\n🎉 *Occasion Outfit* — 'wedding outfit' ya 'office look' bhejo",
-            "te": "\n🎉 *Occasion Outfit* — 'wedding outfit' లేదా 'office look' పంపండి",
-            "ta": "\n🎉 *Occasion Outfit* — 'wedding outfit' அல்லது 'office look' அனுப்புங்கள்",
-        }
-        extra.append(occasion_labels.get(language, occasion_labels["en"]))
-
-    if tenant.has_feature("fit_verification"):
-        fit_labels = {
-            "en": "📐 *Fit Check* — send your wearing photo",
-            "hi": "📐 *Fit Check* — wearing photo bhejo",
-            "te": "📐 *Fit Check* — wearing photo పంపండి",
-            "ta": "📐 *Fit Check* — wearing photo அனுப்புங்கள்",
-        }
-        extra.append(fit_labels.get(language, fit_labels["en"]))
-
-    if extra:
-        lines.extend(extra)
-
-    return "\n".join(lines)

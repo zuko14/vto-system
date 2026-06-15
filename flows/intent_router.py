@@ -319,6 +319,22 @@ def _route_button_reply(
             "intent": Intent.TRYON_SINGLE,
             "button_id": "type_product",
         },
+        # Help menu buttons
+        "help_tryon": {
+            "flow": "help_flow",
+            "action": "greeting",
+            "intent": Intent.GREETING,
+        },
+        "help_delete": {
+            "flow": "deletion_flow",
+            "action": "handle",
+            "intent": Intent.CONSENT_WITHDRAW,
+        },
+        "help_catalog": {
+            "flow": "catalog_flow",
+            "action": "browse",
+            "intent": Intent.CATALOG_BROWSE,
+        },
     }
 
     route = button_routes.get(button_id, {

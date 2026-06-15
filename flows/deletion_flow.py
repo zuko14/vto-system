@@ -10,7 +10,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-from core.constants import ConsentAction, MESSAGES
+from core.constants import ConsentAction, get_message
 from core.database import get_db
 from models.customer import CustomerSession
 from models.tenant import Tenant
@@ -26,6 +26,7 @@ async def handle_deletion(
     session: CustomerSession,
     tenant: Tenant,
     customer_data: Dict[str, Any],
+    language: str = "en",
 ) -> None:
     """
     Handle a data deletion request (DPDP Right to Erasure).
@@ -105,7 +106,7 @@ async def handle_deletion(
         # 5. Send confirmation
         await send_text_message(
             phone_number=phone_number,
-            message=MESSAGES["deletion_complete"],
+            message=get_message("deletion_complete", language),
             phone_number_id=tenant.phone_number_id,
         )
 
@@ -125,9 +126,6 @@ async def handle_deletion(
 
         await send_text_message(
             phone_number=phone_number,
-            message=(
-                "Data deletion mein error aaya. 😔 "
-                "Please dobara try karo ya seller se contact karo."
-            ),
+            message=get_message("unknown_error", language),
             phone_number_id=tenant.phone_number_id,
         )

@@ -14,9 +14,8 @@ from typing import Optional
 from core.constants import (
     SessionState,
     TryOnStatus,
-    MESSAGES,
-    POST_TRYON_BUTTONS,
-    FRIEND_SHARE_BUTTONS,
+    get_message,
+    get_post_tryon_buttons,
 )
 from core.database import get_db
 from middleware.rate_limiter import check_rate_limit, increment_usage
@@ -46,6 +45,7 @@ async def handle_product_image(
     session: CustomerSession,
     tenant: Tenant,
     customer_id: str,
+    language: str = "en",
 ) -> None:
     """
     Handle a product image sent by the customer.
@@ -58,14 +58,16 @@ async def handle_product_image(
         session: Customer session.
         tenant: Tenant object.
         customer_id: Customer UUID.
+        language: Customer's preferred language code.
     """
     # Check rate limit first
     rate = await check_rate_limit(tenant.id, tenant.plan)
     if not rate["allowed"]:
         await send_text_message(
             phone_number=phone_number,
-            message=MESSAGES["plan_limit_reached"].format(
-                seller_name=tenant.business_name
+            message=get_message(
+                "plan_limit_reached", language,
+                seller_name=tenant.business_name,
             ),
             phone_number_id=tenant.phone_number_id,
         )
@@ -97,7 +99,7 @@ async def handle_product_image(
 
             await send_text_message(
                 phone_number=phone_number,
-                message=MESSAGES["processing"],
+                message=get_message("processing", language),
                 phone_number_id=tenant.phone_number_id,
             )
 
@@ -105,7 +107,7 @@ async def handle_product_image(
                 tenant_id=tenant.id,
                 customer_id=customer_id,
                 category=session.pending_category or "apparel",
-                selfie_path=session.pending_selfie_url.split("?")[0].split("/")[-1], # Hacky way to get path from URL, or we can just pass None since it's just for DB tracking
+                selfie_path=session.pending_selfie_url.split("?")[0].split("/")[-1],
             )
             session.current_job_id = job_id
 
@@ -118,6 +120,7 @@ async def handle_product_image(
                 tenant=tenant,
                 session=session,
                 customer_id=customer_id,
+                language=language,
             )
         else:
             # We don't have the selfie yet, ask for it
@@ -126,7 +129,7 @@ async def handle_product_image(
 
             await send_text_message(
                 phone_number=phone_number,
-                message=MESSAGES["awaiting_selfie"],
+                message=get_message("awaiting_selfie", language),
                 phone_number_id=tenant.phone_number_id,
             )
 
@@ -137,10 +140,10 @@ async def handle_product_image(
             )
 
     except Exception as e:
-        logger.error("Failed to handle product image: %s", str(e))
+        logger.error("Failed to handle product image: %s", str(e), exc_info=True)
         await send_text_message(
             phone_number=phone_number,
-            message=MESSAGES["unknown_error"],
+            message=get_message("unknown_error", language),
             phone_number_id=tenant.phone_number_id,
         )
         session.reset()
@@ -166,7 +169,7 @@ async def handle_selfie_first(
         if len(selfie_bytes) < 5000:
             await send_text_message(
                 phone_number=phone_number,
-                message=MESSAGES["invalid_selfie"],
+                message=get_message("invalid_selfie", language),
                 phone_number_id=tenant.phone_number_id,
             )
             return
@@ -184,9 +187,6 @@ async def handle_selfie_first(
         session.state = SessionState.AWAITING_PRODUCT
         session.last_updated = datetime.now(timezone.utc)
 
-        # Fetch translated message
-        from core.constants import get_message
-
         await send_text_message(
             phone_number=phone_number,
             message=get_message("awaiting_product", language),
@@ -199,10 +199,10 @@ async def handle_selfie_first(
         )
 
     except Exception as e:
-        logger.error("Failed to handle selfie first: %s", str(e))
+        logger.error("Failed to handle selfie first: %s", str(e), exc_info=True)
         await send_text_message(
             phone_number=phone_number,
-            message=MESSAGES["unknown_error"],
+            message=get_message("unknown_error", language),
             phone_number_id=tenant.phone_number_id,
         )
         session.reset()
@@ -214,6 +214,7 @@ async def handle_selfie(
     session: CustomerSession,
     tenant: Tenant,
     customer_id: str,
+    language: str = "en",
 ) -> None:
     """
     Handle a selfie sent by the customer.
@@ -225,11 +226,12 @@ async def handle_selfie(
         session: Customer session.
         tenant: Tenant object.
         customer_id: Customer UUID.
+        language: Customer's preferred language code.
     """
     if session.state != SessionState.AWAITING_SELFIE:
         await send_text_message(
             phone_number=phone_number,
-            message="Pehle product photo bhejo, phir selfie! 😊",
+            message=get_message("send_selfie_first", language),
             phone_number_id=tenant.phone_number_id,
         )
         return
@@ -242,7 +244,7 @@ async def handle_selfie(
         if len(selfie_bytes) < 5000:  # Less than 5KB is too small
             await send_text_message(
                 phone_number=phone_number,
-                message=MESSAGES["invalid_selfie"],
+                message=get_message("invalid_selfie", language),
                 phone_number_id=tenant.phone_number_id,
             )
             return
@@ -266,7 +268,7 @@ async def handle_selfie(
         # Notify customer
         await send_text_message(
             phone_number=phone_number,
-            message=MESSAGES["processing"],
+            message=get_message("processing", language),
             phone_number_id=tenant.phone_number_id,
         )
 
@@ -290,13 +292,14 @@ async def handle_selfie(
             tenant=tenant,
             session=session,
             customer_id=customer_id,
+            language=language,
         )
 
     except Exception as e:
-        logger.error("Failed to handle selfie: %s", str(e))
+        logger.error("Failed to handle selfie: %s", str(e), exc_info=True)
         await send_text_message(
             phone_number=phone_number,
-            message=MESSAGES["unknown_error"],
+            message=get_message("unknown_error", language),
             phone_number_id=tenant.phone_number_id,
         )
         session.reset()
@@ -311,6 +314,7 @@ async def _run_tryon_generation(
     tenant: Tenant,
     session: CustomerSession,
     customer_id: str,
+    language: str = "en",
 ) -> None:
     """
     Run the actual try-on generation and deliver the result.
@@ -324,6 +328,7 @@ async def _run_tryon_generation(
         tenant: Tenant object.
         session: Customer session.
         customer_id: Customer UUID.
+        language: Customer's preferred language code.
     """
     db = get_db()
 
@@ -354,15 +359,13 @@ async def _run_tryon_generation(
         await send_image_message(
             phone_number=phone_number,
             image_url=output_url,
-            caption=MESSAGES["tryon_complete"],
+            caption=get_message("tryon_complete", language),
             phone_number_id=tenant.phone_number_id,
         )
 
-        # Send post-try-on buttons
-        if tenant.has_feature("friend_share_loop"):
-            buttons = FRIEND_SHARE_BUTTONS
-        else:
-            buttons = POST_TRYON_BUTTONS
+        # Send post-try-on buttons (localized)
+        include_share = tenant.has_feature("friend_share_loop")
+        buttons = get_post_tryon_buttons(language, include_share=include_share)
 
         await send_interactive_buttons(
             phone_number=phone_number,
@@ -384,7 +387,7 @@ async def _run_tryon_generation(
         session.reset()
 
     except TryOnError as e:
-        logger.error("Try-on generation failed: %s", str(e))
+        logger.error("Try-on generation failed: %s", str(e), exc_info=True)
 
         # Update job as failed
         db.table("tryon_jobs").update({
@@ -394,18 +397,18 @@ async def _run_tryon_generation(
 
         await send_text_message(
             phone_number=phone_number,
-            message=MESSAGES["tryon_failed"],
+            message=get_message("tryon_failed", language),
             phone_number_id=tenant.phone_number_id,
         )
 
         session.reset()
 
     except Exception as e:
-        logger.error("Unexpected error in try-on generation: %s", str(e))
+        logger.error("Unexpected error in try-on generation: %s", str(e), exc_info=True)
 
         await send_text_message(
             phone_number=phone_number,
-            message=MESSAGES["unknown_error"],
+            message=get_message("unknown_error", language),
             phone_number_id=tenant.phone_number_id,
         )
 

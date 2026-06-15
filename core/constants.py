@@ -244,7 +244,7 @@ MESSAGES_I18N = {
             "Send any outfit photo to try it on!"
         ),
         "awaiting_selfie": (
-            "📸 Now send your selfie!\n"
+            "📸 Now send your photo!\n"
             "Tips:\n"
             "• Good lighting\n"
             "• Clear face\n"
@@ -257,9 +257,9 @@ MESSAGES_I18N = {
             "You've used all your try-ons for today 😊 "
             "Try again tomorrow, or contact {seller_name} to upgrade."
         ),
-        "awaiting_selfie": "Great! Ab apni ek saaf photo (selfie) bhejiye, jisme aap samne dekh rahe ho. 📸",
-        "awaiting_product": "Photo mil gayi! 📸 Ab woh outfit bhejiye jo aap try karna chahte ho. 👕",
-        "invalid_selfie": "That doesn't look like a clear selfie. Try again? 😊",
+        "awaiting_product": "Got your photo! 📸 Now send the outfit you want to try on. 👕",
+        "invalid_selfie": "That doesn't look like a clear photo. Try again? 😊",
+        "send_selfie_first": "Please send the product/outfit photo first, then your photo! 😊",
         "help": (
             "Here's what I can do:\n"
             "👕 Outfit try-on — send a product photo\n"
@@ -319,7 +319,8 @@ MESSAGES_I18N = {
             "Aaj ke try-ons khatam ho gaye 😊 "
             "Kal dobara try karo, ya {seller_name} se baat karo upgrade ke liye."
         ),
-        "invalid_selfie": "Yeh selfie clear nahi hai. Ek aur try karo? 😊",
+        "invalid_selfie": "Yeh photo clear nahi hai. Ek aur try karo? 😊",
+        "send_selfie_first": "Pehle product/outfit photo bhejo, phir apni photo! 😊",
         "help": (
             "Main kya kar sakta hoon:\n"
             "👕 Outfit try-on: product photo bhejo\n"
@@ -378,9 +379,9 @@ MESSAGES_I18N = {
             "ఈ రోజు try-ons అయిపోయాయి 😊 "
             "రేపు మళ్ళీ try చేయండి, లేదా {seller_name} ని contact చేయండి."
         ),
-        "awaiting_selfie": "మంచిది! ఇప్పుడు దయచేసి మీరు ముందుకు చూస్తున్న ఒక స్పష్టమైన ఫోటో (selfie) పంపండి. 📸",
         "awaiting_product": "ఫోటో అందింది! 📸 ఇప్పుడు మీరు ప్రయత్నించాలనుకుంటున్న outfit పంపండి. 👕",
-        "invalid_selfie": "ఇది clear selfie కాదు. మళ్ళీ try చేయండి? 😊",
+        "invalid_selfie": "ఇది clear photo కాదు. మళ్ళీ try చేయండి? 😊",
+        "send_selfie_first": "దయచేసి ముందు product/outfit ఫోటో పంపండి, ఆ తర్వాత మీ ఫోటో! 😊",
         "help": (
             "నేను ఏమి చేయగలను:\n"
             "👕 Outfit try-on — product photo పంపండి\n"
@@ -439,7 +440,9 @@ MESSAGES_I18N = {
             "இன்றைய try-ons முடிந்தது 😊 "
             "நாளை மீண்டும் முயற்சிக்கவும், அல்லது {seller_name} ஐ தொடர்பு கொள்ளுங்கள்."
         ),
-        "invalid_selfie": "இது clear selfie அல்ல. மீண்டும் முயற்சிக்கவும்? 😊",
+        "awaiting_product": "உங்கள் புகைப்படம் கிடைத்தது! 📸 இப்போது நீங்கள் முயற்சிக்க விரும்பும் outfit அனுப்புங்கள். 👕",
+        "invalid_selfie": "இது clear photo அல்ல. மீண்டும் முயற்சிக்கவும்? 😊",
+        "send_selfie_first": "முதலில் product/outfit புகைப்படம் அனுப்புங்கள், பின்னர் உங்கள் புகைப்படம்! 😊",
         "help": (
             "நான் என்ன செய்ய முடியும்:\n"
             "👕 Outfit try-on — product photo அனுப்புங்கள்\n"
@@ -481,8 +484,8 @@ MESSAGES_I18N = {
     },
 }
 
-# Backward-compatible alias (defaults to Hindi for existing code)
-MESSAGES = MESSAGES_I18N["hi"]
+# Backward-compatible alias (defaults to English as the fallback language)
+MESSAGES = MESSAGES_I18N["en"]
 
 
 def get_message(key: str, language: str = "en", **kwargs) -> str:
@@ -590,43 +593,93 @@ LANGUAGE_BUTTON_MAP = {
 
 
 # ═══════════════════════════════════════════════════════════════
-# IMAGE TYPE BUTTONS (WhatsApp)
+# IMAGE TYPE BUTTONS (WhatsApp) — Language-aware
 # ═══════════════════════════════════════════════════════════════
 
+_IMAGE_TYPE_BODY = {
+    "en": "We received your photo! 📸 What is this?",
+    "hi": "Aapki photo mil gayi! 📸 Yeh kya hai?",
+    "te": "మీ ఫోటో అందింది! 📸 ఇది ఏమిటి?",
+    "ta": "உங்கள் புகைப்படம் கிடைத்தது! 📸 இது என்ன?",
+}
+
+_IMAGE_TYPE_SELFIE_TITLE = {
+    "en": "My Photo 🤳",
+    "hi": "Meri Photo 🤳",
+    "te": "నా ఫోటో 🤳",
+    "ta": "என் புகைப்படம் 🤳",
+}
+
+_IMAGE_TYPE_PRODUCT_TITLE = {
+    "en": "An Outfit 👕",
+    "hi": "Outfit 👕",
+    "te": "Outfit 👕",
+    "ta": "Outfit 👕",
+}
+
+# Default (English) for backward compat
 IMAGE_TYPE_BUTTONS = {
     "type": "interactive",
     "interactive": {
         "type": "button",
-        "body": {
-            "text": (
-                "We received your photo! 📸 What is this?\n"
-                "ఆ ఫోటో ఏమిటి? / यह फोटो क्या है?"
-            )
-        },
+        "body": {"text": _IMAGE_TYPE_BODY["en"]},
         "action": {
             "buttons": [
                 {
                     "type": "reply",
-                    "reply": {"id": "type_selfie", "title": "My Photo 🤳"},
+                    "reply": {"id": "type_selfie", "title": _IMAGE_TYPE_SELFIE_TITLE["en"]},
                 },
                 {
                     "type": "reply",
-                    "reply": {"id": "type_product", "title": "An Outfit"},
+                    "reply": {"id": "type_product", "title": _IMAGE_TYPE_PRODUCT_TITLE["en"]},
                 },
             ]
         },
     },
 }
 
+
+def get_image_type_buttons(language: str = "en") -> dict:
+    """Get image type buttons localized to the user's language."""
+    lang = language if language in _IMAGE_TYPE_BODY else "en"
+    return {
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": _IMAGE_TYPE_BODY[lang]},
+            "action": {
+                "buttons": [
+                    {
+                        "type": "reply",
+                        "reply": {"id": "type_selfie", "title": _IMAGE_TYPE_SELFIE_TITLE[lang]},
+                    },
+                    {
+                        "type": "reply",
+                        "reply": {"id": "type_product", "title": _IMAGE_TYPE_PRODUCT_TITLE[lang]},
+                    },
+                ]
+            },
+        },
+    }
+
+
 # ═══════════════════════════════════════════════════════════════
-# POST TRY-ON INTERACTIVE BUTTONS (WhatsApp)
+# POST TRY-ON INTERACTIVE BUTTONS (WhatsApp) — Language-aware
 # ═══════════════════════════════════════════════════════════════
 
+_POST_TRYON_BODY = {
+    "en": "How does it look? 👆",
+    "hi": "Kaisa laga? 👆",
+    "te": "ఎలా ఉంది? 👆",
+    "ta": "எப்படி இருக்கு? 👆",
+}
+
+# Default (English) for backward compat
 POST_TRYON_BUTTONS = {
     "type": "interactive",
     "interactive": {
         "type": "button",
-        "body": {"text": "Kaisa laga? 👆"},
+        "body": {"text": _POST_TRYON_BODY["en"]},
         "action": {
             "buttons": [
                 {
@@ -646,12 +699,12 @@ POST_TRYON_BUTTONS = {
     },
 }
 
-# Friend share button (only for plans with friend_share_loop)
+# Friend share button (only for plans with friend_share_loop) — default English
 FRIEND_SHARE_BUTTONS = {
     "type": "interactive",
     "interactive": {
         "type": "button",
-        "body": {"text": "Kaisa laga? 👆"},
+        "body": {"text": _POST_TRYON_BODY["en"]},
         "action": {
             "buttons": [
                 {
@@ -670,6 +723,27 @@ FRIEND_SHARE_BUTTONS = {
         },
     },
 }
+
+
+def get_post_tryon_buttons(language: str = "en", include_share: bool = False) -> dict:
+    """Get post try-on buttons localized to the user's language."""
+    lang = language if language in _POST_TRYON_BODY else "en"
+    buttons = [
+        {"type": "reply", "reply": {"id": "try_another", "title": "Try Another 👕"}},
+    ]
+    if include_share:
+        buttons.append({"type": "reply", "reply": {"id": "share_friend", "title": "Share 👫"}})
+    else:
+        buttons.append({"type": "reply", "reply": {"id": "view_catalog", "title": "View Catalog 🛍️"}})
+    buttons.append({"type": "reply", "reply": {"id": "buy_now", "title": "Buy Now 💳"}})
+    return {
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": _POST_TRYON_BODY[lang]},
+            "action": {"buttons": buttons},
+        },
+    }
 
 
 # ═══════════════════════════════════════════════════════════════

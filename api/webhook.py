@@ -14,7 +14,7 @@ from typing import Dict
 
 from fastapi import APIRouter, BackgroundTasks, Request, Response
 
-from core.constants import Intent, SessionState, MESSAGES, get_message
+from core.constants import Intent, SessionState, MESSAGES, get_message, get_image_type_buttons
 from core.security import verify_webhook_signature, hash_phone_number
 from core.config import get_settings
 from core.database import get_db
@@ -299,10 +299,9 @@ async def _execute_flow(
     elif flow == "image_type_flow":
         if action == "ask_type":
             from services.whatsapp import send_interactive_buttons
-            from core.constants import IMAGE_TYPE_BUTTONS
             await send_interactive_buttons(
                 phone_number=phone_number,
-                interactive_payload=IMAGE_TYPE_BUTTONS,
+                interactive_payload=get_image_type_buttons(language),
                 phone_number_id=tenant.phone_number_id,
             )
         elif action == "handle_selection":
@@ -327,6 +326,7 @@ async def _execute_flow(
                     session=session,
                     tenant=tenant,
                     customer_id=customer_id,
+                    language=language,
                 )
 
     elif flow == "consent_flow":
@@ -366,6 +366,7 @@ async def _execute_flow(
                 session=session,
                 tenant=tenant,
                 customer_id=customer_id,
+                language=language,
             )
         elif action == "receive_selfie":
             await handle_selfie(
@@ -374,6 +375,7 @@ async def _execute_flow(
                 session=session,
                 tenant=tenant,
                 customer_id=customer_id,
+                language=language,
             )
         elif action == "remind_selfie":
             from services.whatsapp import send_text_message
@@ -428,6 +430,7 @@ async def _execute_flow(
             session=session,
             tenant=tenant,
             customer_data=customer_data,
+            language=language,
         )
 
     elif flow == "help_flow":

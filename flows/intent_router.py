@@ -8,7 +8,7 @@ New user flow: Language Selection → Consent → Main flows.
 import logging
 from typing import Any, Dict, Optional
 
-from core.constants import Intent, SessionState, MESSAGES, LANGUAGE_BUTTON_MAP
+from core.constants import Intent, SessionState, MESSAGES, LANGUAGE_BUTTON_MAP, get_image_type_buttons
 from models.customer import CustomerSession
 from models.tenant import Tenant
 from services.groq_client import classify_intent
@@ -193,6 +193,7 @@ async def route_message(
 
         # New user with no language selected → show language picker first
         if not has_language and session.pending_language is None:
+            session.state = SessionState.AWAITING_LANGUAGE
             return {
                 "flow": "language_flow",
                 "action": "send_picker",

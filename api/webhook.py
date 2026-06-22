@@ -38,6 +38,7 @@ from services.whatsapp import (
     download_media,
     extract_message_data,
     mark_as_read,
+    send_text_message,
 )
 
 logger = logging.getLogger(__name__)
@@ -152,6 +153,10 @@ async def _process_message(message_data: dict) -> None:
     button_reply_id = message_data.get("button_reply_id")
     message_id = message_data["message_id"]
 
+    # Initialize to safe defaults — prevents UnboundLocalError in error handler
+    tenant = None
+    language = "en"
+
     try:
         # 1. Resolve tenant
         try:
@@ -263,10 +268,12 @@ async def _process_message(message_data: dict) -> None:
             str(e),
             exc_info=True,
         )
-        try:
-            await handle_help(from_number, tenant, "unknown", language)
-        except Exception:
-            pass
+        # Only attempt error message if we have a valid tenant
+        if tenant is not None:
+            try:
+                await handle_help(from_number, tenant, "unknown", language)
+            except Exception:
+                logger.error("Failed to send error message to user")
 
 
 async def _execute_flow(
@@ -424,23 +431,61 @@ async def _execute_flow(
         )
 
     elif flow == "deletion_flow":
-        await handle_deletion(
-            phone_number=phone_number,
-            phone_hash=phone_hash,
-            session=session,
-            tenant=tenant,
-            customer_data=customer_data,
-            language=language,
-        )
+        if action == "confirm":
+            # Show confirmation buttons instead of immediate deletion
+            from services.whatsapp import send_interactive_buttons
+            from core.constants import get_deletion_confirm_buttons
+            session.state = SessionState.AWAITING_DELETION_CONFIRM
+            await send_interactive_buttons(
+                phone_number=phone_number,
+                interactive_payload=get_deletion_confirm_buttons(language),
+                phone_number_id=tenant.phone_number_id,
+            )
+        elif action == "execute":
+            # Actually delete the data
+            await handle_deletion(
+                phone_number=phone_number,
+                phone_hash=phone_hash,
+                session=session,
+                tenant=tenant,
+                customer_data=customer_data,
+                language=language,
+            )
+        elif action == "cancelled":
+            # User cancelled deletion
+            session.reset()
+            await send_text_message(
+                phone_number=phone_number,
+                message=get_message("deletion_cancelled", language),
+                phone_number_id=tenant.phone_number_id,
+            )
+        else:
+            # Legacy: direct deletion (e.g. from old button routes)
+            await handle_deletion(
+                phone_number=phone_number,
+                phone_hash=phone_hash,
+                session=session,
+                tenant=tenant,
+                customer_data=customer_data,
+                language=language,
+            )
 
     elif flow == "help_flow":
         intent = route.get("intent", Intent.HELP)
-        if intent == Intent.GREETING:
+        if intent == Intent.GREETING or action == "greeting":
             await handle_help(phone_number, tenant, "greeting", language)
         elif action in ("feature_not_available", "voice_not_understood", "empty_message"):
             await handle_help(phone_number, tenant, action, language)
-        else:
+        elif action == "session_expired":
+            await send_text_message(
+                phone_number=phone_number,
+                message=get_message("session_expired", language),
+                phone_number_id=tenant.phone_number_id,
+            )
+        elif action == "help" or intent == Intent.HELP:
             await handle_help(phone_number, tenant, "help", language)
+        else:
+            await handle_help(phone_number, tenant, "unknown", language)
 
     else:
         await handle_help(phone_number, tenant, "unknown", language)

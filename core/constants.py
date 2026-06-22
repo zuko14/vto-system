@@ -38,6 +38,7 @@ class SessionState(str, Enum):
     POST_TRYON = "post_tryon"
     AWAITING_CONSENT = "awaiting_consent"
     AWAITING_FRIEND_NUMBER = "awaiting_friend_number"
+    AWAITING_DELETION_CONFIRM = "awaiting_deletion_confirm"
 
 
 class TryOnStatus(str, Enum):
@@ -285,6 +286,15 @@ MESSAGES_I18N = {
             "All your data has been deleted. ✅\n"
             "If you want to use again, send AGREE to restart."
         ),
+        "deletion_confirm": (
+            "⚠️ *Are you sure?*\n\n"
+            "This will permanently delete:\n"
+            "• Your photos\n"
+            "• Try-on history\n"
+            "• Account data\n\n"
+            "This action cannot be undone."
+        ),
+        "deletion_cancelled": "No worries! Your data is safe. 😊 Send any outfit photo to continue. 👕",
         "consent_declined": "No problem! Whenever you're ready, send AGREE.",
         "consent_confirmed": (
             "Thank you! ✅ You can now use virtual try-on. "
@@ -298,6 +308,7 @@ MESSAGES_I18N = {
             "I couldn't understand that voice message 😅\n"
             "Try sending a text or type 'help'."
         ),
+        "session_expired": "Your previous session has expired. Let's start fresh! Send an outfit photo 👕 or type 'help'.",
     },
     "hi": {
         "greeting": (
@@ -346,6 +357,15 @@ MESSAGES_I18N = {
             "Aapka sara data delete ho gaya. ✅\n"
             "Agar dobara use karna ho, AGREE bhejke restart kar sakte ho."
         ),
+        "deletion_confirm": (
+            "⚠️ *Kya aap sure hain?*\n\n"
+            "Yeh permanently delete hoga:\n"
+            "• Aapki photos\n"
+            "• Try-on history\n"
+            "• Account data\n\n"
+            "Yeh action undo nahi ho sakta."
+        ),
+        "deletion_cancelled": "Koi baat nahi! Aapka data safe hai. 😊 Koi bhi outfit photo bhejo continue karne ke liye. 👕",
         "consent_declined": "No problem! Jab bhi ready ho, AGREE bhejo.",
         "consent_confirmed": (
             "Dhanyavaad! ✅ Ab aap virtual try-on use kar sakte ho. "
@@ -359,6 +379,7 @@ MESSAGES_I18N = {
             "Voice message samajh nahi aaya 😅\n"
             "Text mein bhejo ya 'help' likh ke bhejo."
         ),
+        "session_expired": "Aapka pichla session expire ho gaya. Fresh start karte hain! Outfit photo bhejo 👕 ya 'help' type karo.",
     },
     "te": {
         "greeting": (
@@ -407,6 +428,15 @@ MESSAGES_I18N = {
             "మీ data అంతా delete అయింది. ✅\n"
             "మళ్ళీ use చేయాలంటే, AGREE పంపి restart చేయండి."
         ),
+        "deletion_confirm": (
+            "⚠️ *మీరు sure గా ఉన్నారా?*\n\n"
+            "ఇది permanently delete అవుతుంది:\n"
+            "• మీ photos\n"
+            "• Try-on history\n"
+            "• Account data\n\n"
+            "ఈ action undo చేయలేరు."
+        ),
+        "deletion_cancelled": "ఫర్వాలేదు! మీ data safe గా ఉంది. 😊 ఏ outfit photo అయినా పంపండి continue చేయడానికి. 👕",
         "consent_declined": "ఫర్వాలేదు! మీరు ready అయినప్పుడు AGREE పంపండి.",
         "consent_confirmed": (
             "ధన్యవాదాలు! ✅ ఇప్పుడు virtual try-on use చేయవచ్చు. "
@@ -420,6 +450,7 @@ MESSAGES_I18N = {
             "Voice message అర్థం కాలేదు 😅\n"
             "Text లో పంపండి లేదా 'help' టైప్ చేయండి."
         ),
+        "session_expired": "మీ ముందు session expire అయింది. Fresh start చేద్దాం! Outfit photo పంపండి 👕 లేదా 'help' టైప్ చేయండి.",
     },
     "ta": {
         "greeting": (
@@ -468,6 +499,15 @@ MESSAGES_I18N = {
             "உங்கள் data அனைத்தும் delete ஆகிவிட்டது. ✅\n"
             "மீண்டும் பயன்படுத்த, AGREE அனுப்பி restart செய்யுங்கள்."
         ),
+        "deletion_confirm": (
+            "⚠️ *நீங்கள் நிச்சயமா?*\n\n"
+            "இது permanently delete ஆகும்:\n"
+            "• உங்கள் photos\n"
+            "• Try-on history\n"
+            "• Account data\n\n"
+            "இந்த action undo செய்ய முடியாது."
+        ),
+        "deletion_cancelled": "பரவாயில்லை! உங்கள் data safe ஆக உள்ளது. 😊 ஏதாவது outfit photo அனுப்புங்கள் continue செய்ய. 👕",
         "consent_declined": "பரவாயில்லை! நீங்கள் ready ஆனால் AGREE அனுப்புங்கள்.",
         "consent_confirmed": (
             "நன்றி! ✅ இப்போது virtual try-on பயன்படுத்தலாம். "
@@ -481,6 +521,7 @@ MESSAGES_I18N = {
             "Voice message புரியவில்லை 😅\n"
             "Text ல் அனுப்புங்கள் அல்லது 'help' type செய்யுங்கள்."
         ),
+        "session_expired": "முந்தைய session காலாவதியானது. புதிதாக தொடங்குவோம்! Outfit photo அனுப்புங்கள் 👕 அல்லது 'help' type செய்யுங்கள்.",
     },
 }
 
@@ -717,6 +758,49 @@ def get_image_type_buttons(language: str = "en") -> dict:
                     {
                         "type": "reply",
                         "reply": {"id": "type_product", "title": _IMAGE_TYPE_PRODUCT_TITLE[lang]},
+                    },
+                ]
+            },
+        },
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
+# DELETION CONFIRMATION BUTTONS (WhatsApp) — Language-aware
+# ═══════════════════════════════════════════════════════════════
+
+_DELETION_CONFIRM_TITLE = {
+    "en": "Yes, Delete All 🗑️",
+    "hi": "Haan, Delete 🗑️",
+    "te": "అవును, Delete 🗑️",
+    "ta": "ஆம், Delete 🗑️",
+}
+
+_DELETION_CANCEL_TITLE = {
+    "en": "Cancel ❌",
+    "hi": "Cancel ❌",
+    "te": "Cancel ❌",
+    "ta": "Cancel ❌",
+}
+
+
+def get_deletion_confirm_buttons(language: str = "en") -> dict:
+    """Get deletion confirmation buttons localized to the user's language."""
+    lang = language if language in _DELETION_CONFIRM_TITLE else "en"
+    return {
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": get_message("deletion_confirm", lang)},
+            "action": {
+                "buttons": [
+                    {
+                        "type": "reply",
+                        "reply": {"id": "confirm_delete", "title": _DELETION_CONFIRM_TITLE[lang]},
+                    },
+                    {
+                        "type": "reply",
+                        "reply": {"id": "cancel_delete", "title": _DELETION_CANCEL_TITLE[lang]},
                     },
                 ]
             },

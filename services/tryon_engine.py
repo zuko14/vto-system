@@ -145,6 +145,10 @@ async def _generate_viton(selfie_url: str, product_url: str) -> str:
     settings = get_settings()
 
     try:
+        # Validate URLs are accessible before sending to Replicate
+        await _validate_url_accessible(selfie_url, "selfie")
+        await _validate_url_accessible(product_url, "product")
+
         # Run the VITON model on Replicate
         output = await asyncio.wait_for(
             _run_replicate(
@@ -165,11 +169,18 @@ async def _generate_viton(selfie_url: str, product_url: str) -> str:
         if not output:
             raise TryOnError("No output received from VITON model")
 
-        # Output is typically a list of URLs or a single URL
+        # Output can be: a list of URLs, a single URL string, or a FileOutput object
         if isinstance(output, list):
             result_url = str(output[0])
+        elif hasattr(output, 'url'):
+            # Replicate FileOutput object
+            result_url = str(output.url)
         else:
             result_url = str(output)
+
+        # Validate result URL
+        if not result_url or not result_url.startswith("http"):
+            raise TryOnError(f"Invalid output URL from VITON model: {result_url[:100]}")
 
         logger.info("VITON generation complete: %s", result_url[:80])
         return result_url
@@ -178,8 +189,43 @@ async def _generate_viton(selfie_url: str, product_url: str) -> str:
         raise TryOnError(
             f"VITON generation timed out after {REPLICATE_CONFIG['timeout_poll']}s"
         )
+    except TryOnError:
+        raise
     except Exception as e:
-        raise TryOnError(f"VITON generation failed: {str(e)}")
+        error_msg = str(e)
+        # Provide helpful error messages for common failures
+        if "authentication" in error_msg.lower() or "401" in error_msg:
+            raise TryOnError("Replicate API token is invalid or expired. Check REPLICATE_API_TOKEN.")
+        elif "not found" in error_msg.lower() or "404" in error_msg:
+            raise TryOnError(f"Replicate model not found: {settings.replicate_viton_model}")
+        elif "payment" in error_msg.lower() or "billing" in error_msg.lower():
+            raise TryOnError("Replicate account needs billing setup or has insufficient credits.")
+        else:
+            raise TryOnError(f"VITON generation failed: {error_msg}")
+
+
+async def _validate_url_accessible(url: str, label: str) -> None:
+    """
+    Quick HEAD check to ensure a URL is accessible before sending to Replicate.
+    Replicate needs to download the image, so the URL must be publicly reachable.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.head(url, follow_redirects=True)
+            if response.status_code >= 400:
+                logger.warning(
+                    "%s URL returned %d — Replicate may fail to download: %s",
+                    label,
+                    response.status_code,
+                    url[:100],
+                )
+    except Exception as e:
+        logger.warning(
+            "Could not validate %s URL (may still work): %s — %s",
+            label,
+            url[:100],
+            str(e),
+        )
 
 
 async def _run_replicate(model: str, input_data: dict):
@@ -195,12 +241,28 @@ async def _run_replicate(model: str, input_data: dict):
     """
     import replicate as replicate_lib
 
+    settings = get_settings()
+
+    # Ensure API token is set in environment for the replicate library
+    import os
+    if not os.environ.get("REPLICATE_API_TOKEN"):
+        os.environ["REPLICATE_API_TOKEN"] = settings.replicate_api_token
+
     # Run in a thread since replicate library is sync
     loop = asyncio.get_event_loop()
-    output = await loop.run_in_executor(
-        None,
-        lambda: replicate_lib.run(model, input=input_data),
-    )
+
+    def _sync_run():
+        try:
+            output = replicate_lib.run(model, input=input_data)
+            # If output is an iterator, consume it to get actual results
+            if hasattr(output, '__iter__') and not isinstance(output, (str, bytes, list)):
+                return list(output)
+            return output
+        except Exception as e:
+            logger.error("Replicate sync run error: %s", str(e))
+            raise
+
+    output = await loop.run_in_executor(None, _sync_run)
     return output
 
 

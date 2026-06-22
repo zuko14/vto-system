@@ -97,19 +97,24 @@ async def handle_consent_response(
     consent_keywords = {"AGREE", "I AGREE", "YES", "OK", "HAAN", "HA", "हां", "అవును"}
 
     if response in consent_keywords:
+        # Use session's pending language if available, otherwise fall back
+        consent_language = language
+        if hasattr(session, 'pending_language') and session.pending_language:
+            consent_language = session.pending_language
+
         # Record consent in database
         await _record_consent(
             phone_hash=phone_hash,
             tenant_id=tenant.id,
             customer_id=customer_id,
             action=ConsentAction.GIVEN,
-            language=language,
+            language=consent_language,
         )
 
         # Send confirmation
         await send_text_message(
             phone_number=phone_number,
-            message=get_message("consent_confirmed", language),
+            message=get_message("consent_confirmed", consent_language),
             phone_number_id=tenant.phone_number_id,
         )
 

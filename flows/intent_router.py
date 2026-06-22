@@ -3,9 +3,13 @@ ZukoLabs VTO — Intent Router
 
 Classifies incoming messages using Groq and routes to the correct flow.
 New user flow: Language Selection → Consent → Main flows.
+
+KEY DESIGN: Every mid-flow state has escape hatches for "help", "delete",
+"cancel" — users are never trapped in a state machine loop.
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from core.constants import Intent, SessionState, MESSAGES, LANGUAGE_BUTTON_MAP, get_image_type_buttons
@@ -14,6 +18,77 @@ from models.tenant import Tenant
 from services.groq_client import classify_intent
 
 logger = logging.getLogger(__name__)
+
+# ── Global escape keywords ────────────────────────────────────
+# These keywords ALWAYS break out of mid-flow states
+_HELP_KEYWORDS = {"HELP", "MADAD", "MENU", "OPTIONS"}
+_DELETE_KEYWORDS = {"DELETE", "MUJHE HATAO", "REMOVE ME", "DATA DELETE"}
+_CANCEL_KEYWORDS = {"CANCEL", "BACK", "STOP", "QUIT", "EXIT", "RESET"}
+
+# Session timeout in seconds (30 minutes)
+_SESSION_TIMEOUT_SECONDS = 30 * 60
+
+
+def _check_session_timeout(session: CustomerSession) -> bool:
+    """
+    Check if a session has timed out (30 minutes of inactivity).
+    Returns True if the session was expired and reset.
+    """
+    if session.state == SessionState.IDLE:
+        return False
+
+    elapsed = (datetime.now(timezone.utc) - session.last_updated).total_seconds()
+    if elapsed > _SESSION_TIMEOUT_SECONDS:
+        logger.info(
+            "Session timed out (%.0fs idle, state=%s) — resetting to IDLE",
+            elapsed,
+            session.state.value,
+        )
+        session.reset()
+        return True
+    return False
+
+
+def _check_escape_keywords(text: str, session: CustomerSession) -> Optional[Dict[str, Any]]:
+    """
+    Check if a text message is a global escape keyword.
+    If so, reset the session and return the appropriate route.
+    Returns None if no escape keyword matched.
+    """
+    if not text:
+        return None
+
+    upper = text.strip().upper()
+
+    # Help escape — always works, resets session
+    if upper in _HELP_KEYWORDS:
+        session.reset()
+        return {
+            "flow": "help_flow",
+            "action": "help",
+            "intent": Intent.HELP,
+        }
+
+    # Delete escape — always works, resets to deletion flow
+    if upper in _DELETE_KEYWORDS:
+        session.reset()
+        return {
+            "flow": "deletion_flow",
+            "action": "confirm",
+            "intent": Intent.CONSENT_WITHDRAW,
+            "text": text,
+        }
+
+    # Cancel escape — resets session, shows greeting
+    if upper in _CANCEL_KEYWORDS:
+        session.reset()
+        return {
+            "flow": "help_flow",
+            "action": "greeting",
+            "intent": Intent.GREETING,
+        }
+
+    return None
 
 
 async def route_message(
@@ -46,6 +121,16 @@ async def route_message(
         Dict with 'flow' (handler name), 'intent', and additional context.
     """
 
+    # ── 0. Session timeout check ─────────────────────────────
+    if _check_session_timeout(session):
+        # Session was expired — treat as fresh message
+        # Send a session expired notification then process normally
+        return {
+            "flow": "help_flow",
+            "action": "session_expired",
+            "intent": Intent.GREETING,
+        }
+
     # ── 1. Handle language picker button replies ──────────────
     if button_reply_id and button_reply_id in LANGUAGE_BUTTON_MAP:
         selected_lang = LANGUAGE_BUTTON_MAP[button_reply_id]
@@ -62,9 +147,16 @@ async def route_message(
     if button_reply_id:
         return _route_button_reply(button_reply_id, session, tenant)
 
-    # ── 3. Handle mid-flow states ─────────────────────────────
+    # ── 3. Handle mid-flow states (with escape hatches) ───────
+
+    # -- Check escape keywords for ALL mid-flow states --
+    if session.state not in (SessionState.IDLE, SessionState.AWAITING_CONSENT) and message_type == "text":
+        escape = _check_escape_keywords(text, session)
+        if escape:
+            return escape
+
+    # -- AWAITING_LANGUAGE --
     if session.state == SessionState.AWAITING_LANGUAGE:
-        # User sent text instead of tapping a button — try to match language
         if message_type == "text" and text:
             upper = text.strip().upper()
             lang_text_map = {
@@ -91,19 +183,47 @@ async def route_message(
             "intent": Intent.GREETING,
         }
 
+    # -- AWAITING_IMAGE_TYPE --
     if session.state == SessionState.AWAITING_IMAGE_TYPE:
-        # If they send another image instead of tapping a button, update the pending media
+        # If they send another image, update pending media and re-ask type
         if message_type == "image" and media_id:
             session.pending_media_id = media_id
             session.pending_media_caption = text
-            
-        # Fallback to re-asking the type
+            return {
+                "flow": "image_type_flow",
+                "action": "ask_type",
+                "intent": Intent.TRYON_SINGLE,
+            }
+
+        # Text messages in this state: try to match common responses
+        if message_type == "text" and text:
+            upper = text.strip().upper()
+            # User might type "selfie", "my photo", "outfit", "product"
+            selfie_keywords = {"SELFIE", "MY PHOTO", "PHOTO", "MERI PHOTO", "FACE"}
+            outfit_keywords = {"OUTFIT", "PRODUCT", "DRESS", "CLOTH", "GARMENT", "CLOTHES"}
+            if upper in selfie_keywords or any(kw in upper for kw in selfie_keywords):
+                return {
+                    "flow": "image_type_flow",
+                    "action": "handle_selection",
+                    "intent": Intent.TRYON_SINGLE,
+                    "button_id": "type_selfie",
+                }
+            if upper in outfit_keywords or any(kw in upper for kw in outfit_keywords):
+                return {
+                    "flow": "image_type_flow",
+                    "action": "handle_selection",
+                    "intent": Intent.TRYON_SINGLE,
+                    "button_id": "type_product",
+                }
+
+        # Fallback: re-ask the type with buttons
         return {
             "flow": "image_type_flow",
             "action": "ask_type",
             "intent": Intent.UNKNOWN,
         }
 
+    # -- AWAITING_SELFIE --
     if session.state == SessionState.AWAITING_SELFIE:
         if message_type == "image" and media_id:
             return {
@@ -119,6 +239,7 @@ async def route_message(
                 "intent": Intent.TRYON_SINGLE,
             }
 
+    # -- AWAITING_PRODUCT --
     if session.state == SessionState.AWAITING_PRODUCT:
         if message_type == "image" and media_id:
             return {
@@ -135,7 +256,19 @@ async def route_message(
                 "intent": Intent.TRYON_SINGLE,
             }
 
+    # -- AWAITING_CONSENT --
     if session.state == SessionState.AWAITING_CONSENT:
+        # Allow DELETE even during consent flow
+        if message_type == "text" and text:
+            upper = text.strip().upper()
+            if upper in _DELETE_KEYWORDS:
+                session.reset()
+                return {
+                    "flow": "deletion_flow",
+                    "action": "confirm",
+                    "intent": Intent.CONSENT_WITHDRAW,
+                    "text": text,
+                }
         return {
             "flow": "consent_flow",
             "action": "check_response",
@@ -143,6 +276,35 @@ async def route_message(
             "text": text,
         }
 
+    # -- AWAITING_DELETION_CONFIRM --
+    if session.state == SessionState.AWAITING_DELETION_CONFIRM:
+        # Only accept text confirmation, otherwise re-ask
+        if message_type == "text" and text:
+            upper = text.strip().upper()
+            confirm_keywords = {"YES", "CONFIRM", "HAAN", "HA", "हां", "అవును", "ஆம்", "DELETE"}
+            cancel_keywords = {"NO", "CANCEL", "NAHI", "BACK", "NOPE"}
+            if upper in confirm_keywords:
+                session.reset()
+                return {
+                    "flow": "deletion_flow",
+                    "action": "execute",
+                    "intent": Intent.CONSENT_WITHDRAW,
+                }
+            if upper in cancel_keywords:
+                session.reset()
+                return {
+                    "flow": "deletion_flow",
+                    "action": "cancelled",
+                    "intent": Intent.UNKNOWN,
+                }
+        # Unrecognized — re-ask
+        return {
+            "flow": "deletion_flow",
+            "action": "confirm",
+            "intent": Intent.CONSENT_WITHDRAW,
+        }
+
+    # -- AWAITING_FRIEND_NUMBER --
     if session.state == SessionState.AWAITING_FRIEND_NUMBER:
         return {
             "flow": "friend_share_flow",
@@ -160,16 +322,16 @@ async def route_message(
             upper = text.strip().upper()
 
             # Allow deletion even without consent
-            if upper in ("DELETE", "MUJHE HATAO", "REMOVE ME"):
+            if upper in _DELETE_KEYWORDS:
                 return {
                     "flow": "deletion_flow",
-                    "action": "handle",
+                    "action": "confirm",
                     "intent": Intent.CONSENT_WITHDRAW,
                     "text": text,
                 }
 
             # Allow HELP without consent
-            if upper in ("HELP", "MADAD"):
+            if upper in _HELP_KEYWORDS:
                 return {
                     "flow": "help_flow",
                     "action": "help",
@@ -227,7 +389,47 @@ async def route_message(
             "intent": Intent.UNKNOWN,
         }
 
-    # ── 7. Classify intent for text messages ──────────────────
+    # ── 7. Keyword matching BEFORE Groq LLM ──────────────────
+    # Direct keyword matching for common commands — avoids LLM dependency
+    if text:
+        upper = text.strip().upper()
+
+        # Help keywords
+        if upper in _HELP_KEYWORDS:
+            return {
+                "flow": "help_flow",
+                "action": "help",
+                "intent": Intent.HELP,
+            }
+
+        # Delete keywords
+        if upper in _DELETE_KEYWORDS:
+            return {
+                "flow": "deletion_flow",
+                "action": "confirm",
+                "intent": Intent.CONSENT_WITHDRAW,
+                "text": text,
+            }
+
+        # Greeting keywords
+        greeting_keywords = {"HI", "HELLO", "HEY", "NAMASTE", "NAMASKAR", "VANAKKAM"}
+        if upper in greeting_keywords:
+            return {
+                "flow": "help_flow",
+                "action": "greeting",
+                "intent": Intent.GREETING,
+            }
+
+        # Catalog keywords
+        catalog_keywords = {"CATALOG", "CATALOGUE", "BROWSE", "SHOP", "PRODUCTS"}
+        if upper in catalog_keywords:
+            return {
+                "flow": "catalog_flow",
+                "action": "browse",
+                "intent": Intent.CATALOG_BROWSE,
+            }
+
+    # ── 8. Classify intent for text messages via Groq LLM ─────
     if not text:
         return {
             "flow": "help_flow",
@@ -240,7 +442,7 @@ async def route_message(
 
     logger.info("Intent classified: %s for text: '%s...'", intent.value, text[:50])
 
-    # ── 8. Route to the correct flow ──────────────────────────
+    # ── 9. Route to the correct flow ──────────────────────────
     flow_map = {
         Intent.TRYON_SINGLE: "tryon_flow",
         Intent.TRYON_OCCASION: "occasion_agent",
@@ -271,9 +473,14 @@ async def route_message(
             "feature": required_feature,
         }
 
+    # Map deletion intent to confirm action (not direct execute)
+    action = "handle"
+    if flow == "deletion_flow":
+        action = "confirm"
+
     return {
         "flow": flow,
-        "action": "handle",
+        "action": action,
         "intent": intent,
         "text": text,
     }
@@ -327,13 +534,24 @@ def _route_button_reply(
         },
         "help_delete": {
             "flow": "deletion_flow",
-            "action": "handle",
+            "action": "confirm",
             "intent": Intent.CONSENT_WITHDRAW,
         },
         "help_catalog": {
             "flow": "catalog_flow",
             "action": "browse",
             "intent": Intent.CATALOG_BROWSE,
+        },
+        # Deletion confirmation buttons
+        "confirm_delete": {
+            "flow": "deletion_flow",
+            "action": "execute",
+            "intent": Intent.CONSENT_WITHDRAW,
+        },
+        "cancel_delete": {
+            "flow": "deletion_flow",
+            "action": "cancelled",
+            "intent": Intent.UNKNOWN,
         },
     }
 

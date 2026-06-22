@@ -6,6 +6,7 @@ greeting, help, intent routing, and plan limit enforcement.
 """
 
 import pytest
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from core.constants import Intent, SessionState, MESSAGES
@@ -89,13 +90,10 @@ class TestIntentRouter:
     """Tests for the intent router."""
 
     @pytest.mark.asyncio
-    @patch("flows.intent_router.classify_intent")
-    async def test_routes_greeting_to_help_flow(
-        self, mock_classify, mock_tenant, mock_session, mock_customer_data
+    async def test_routes_greeting_keyword_directly(
+        self, mock_tenant, mock_session, mock_customer_data
     ):
-        """Greeting intent should route to help flow."""
-        mock_classify.return_value = Intent.GREETING
-
+        """Greeting keyword 'hello' should route directly without LLM."""
         from flows.intent_router import route_message
 
         result = await route_message(
@@ -107,7 +105,27 @@ class TestIntentRouter:
         )
 
         assert result["flow"] == "help_flow"
+        assert result["action"] == "greeting"
         assert result["intent"] == Intent.GREETING
+
+    @pytest.mark.asyncio
+    async def test_help_keyword_routes_directly(
+        self, mock_tenant, mock_session, mock_customer_data
+    ):
+        """'help' keyword should route directly to help_flow without LLM."""
+        from flows.intent_router import route_message
+
+        result = await route_message(
+            text="help",
+            message_type="text",
+            session=mock_session,
+            tenant=mock_tenant,
+            customer_data=mock_customer_data,
+        )
+
+        assert result["flow"] == "help_flow"
+        assert result["action"] == "help"
+        assert result["intent"] == Intent.HELP
 
     @pytest.mark.asyncio
     @patch("flows.intent_router.classify_intent")
@@ -229,6 +247,178 @@ class TestIntentRouter:
 
         assert result["flow"] == "help_flow"
         assert result["action"] == "feature_not_available"
+
+    # ── ESCAPE HATCH TESTS ─────────────────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_help_escape_from_awaiting_image_type(
+        self, mock_tenant, mock_session, mock_customer_data
+    ):
+        """'help' should escape from AWAITING_IMAGE_TYPE state."""
+        mock_session.state = SessionState.AWAITING_IMAGE_TYPE
+
+        from flows.intent_router import route_message
+
+        result = await route_message(
+            text="help",
+            message_type="text",
+            session=mock_session,
+            tenant=mock_tenant,
+            customer_data=mock_customer_data,
+        )
+
+        assert result["flow"] == "help_flow"
+        assert result["action"] == "help"
+        assert mock_session.state == SessionState.IDLE
+
+    @pytest.mark.asyncio
+    async def test_help_escape_from_awaiting_selfie(
+        self, mock_tenant, mock_session, mock_customer_data
+    ):
+        """'help' should escape from AWAITING_SELFIE state."""
+        mock_session.state = SessionState.AWAITING_SELFIE
+
+        from flows.intent_router import route_message
+
+        result = await route_message(
+            text="help",
+            message_type="text",
+            session=mock_session,
+            tenant=mock_tenant,
+            customer_data=mock_customer_data,
+        )
+
+        assert result["flow"] == "help_flow"
+        assert result["action"] == "help"
+        assert mock_session.state == SessionState.IDLE
+
+    @pytest.mark.asyncio
+    async def test_help_escape_from_awaiting_product(
+        self, mock_tenant, mock_session, mock_customer_data
+    ):
+        """'help' should escape from AWAITING_PRODUCT state."""
+        mock_session.state = SessionState.AWAITING_PRODUCT
+
+        from flows.intent_router import route_message
+
+        result = await route_message(
+            text="help",
+            message_type="text",
+            session=mock_session,
+            tenant=mock_tenant,
+            customer_data=mock_customer_data,
+        )
+
+        assert result["flow"] == "help_flow"
+        assert result["action"] == "help"
+        assert mock_session.state == SessionState.IDLE
+
+    @pytest.mark.asyncio
+    async def test_delete_escape_from_mid_flow(
+        self, mock_tenant, mock_session, mock_customer_data
+    ):
+        """'DELETE' should escape from any mid-flow state to deletion confirm."""
+        mock_session.state = SessionState.AWAITING_IMAGE_TYPE
+
+        from flows.intent_router import route_message
+
+        result = await route_message(
+            text="DELETE",
+            message_type="text",
+            session=mock_session,
+            tenant=mock_tenant,
+            customer_data=mock_customer_data,
+        )
+
+        assert result["flow"] == "deletion_flow"
+        assert result["action"] == "confirm"
+        assert mock_session.state == SessionState.IDLE
+
+    @pytest.mark.asyncio
+    async def test_cancel_escape_from_mid_flow(
+        self, mock_tenant, mock_session, mock_customer_data
+    ):
+        """'cancel' should escape from mid-flow states to greeting."""
+        mock_session.state = SessionState.AWAITING_SELFIE
+
+        from flows.intent_router import route_message
+
+        result = await route_message(
+            text="cancel",
+            message_type="text",
+            session=mock_session,
+            tenant=mock_tenant,
+            customer_data=mock_customer_data,
+        )
+
+        assert result["flow"] == "help_flow"
+        assert result["action"] == "greeting"
+        assert mock_session.state == SessionState.IDLE
+
+    # ── DELETION CONFIRMATION TESTS ────────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_deletion_confirm_button_routes_to_execute(
+        self, mock_tenant, mock_session, mock_customer_data
+    ):
+        """confirm_delete button should route to deletion execute."""
+        from flows.intent_router import route_message
+
+        result = await route_message(
+            text="",
+            message_type="interactive",
+            session=mock_session,
+            tenant=mock_tenant,
+            customer_data=mock_customer_data,
+            button_reply_id="confirm_delete",
+        )
+
+        assert result["flow"] == "deletion_flow"
+        assert result["action"] == "execute"
+
+    @pytest.mark.asyncio
+    async def test_deletion_cancel_button_routes_to_cancelled(
+        self, mock_tenant, mock_session, mock_customer_data
+    ):
+        """cancel_delete button should route to deletion cancelled."""
+        from flows.intent_router import route_message
+
+        result = await route_message(
+            text="",
+            message_type="interactive",
+            session=mock_session,
+            tenant=mock_tenant,
+            customer_data=mock_customer_data,
+            button_reply_id="cancel_delete",
+        )
+
+        assert result["flow"] == "deletion_flow"
+        assert result["action"] == "cancelled"
+
+    # ── SESSION TIMEOUT TEST ───────────────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_session_timeout_resets_to_idle(
+        self, mock_tenant, mock_session, mock_customer_data
+    ):
+        """Stale session (>30 min) should be reset and return session_expired."""
+        from datetime import timedelta
+        mock_session.state = SessionState.AWAITING_SELFIE
+        mock_session.last_updated = datetime.now(timezone.utc) - timedelta(minutes=45)
+
+        from flows.intent_router import route_message
+
+        result = await route_message(
+            text="some text",
+            message_type="text",
+            session=mock_session,
+            tenant=mock_tenant,
+            customer_data=mock_customer_data,
+        )
+
+        assert result["flow"] == "help_flow"
+        assert result["action"] == "session_expired"
+        assert mock_session.state == SessionState.IDLE
 
 
 # ═══════════════════════════════════════════════════════════════
